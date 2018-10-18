@@ -1,62 +1,118 @@
+from scipy.sparse import csr_matrix
 import numpy as np
-import pyHTM3.sp as sp
-import pyHTM3.tm as tm
+import pyHTM3.spatial_pooler as spatial_pooler
+import pyHTM3.temporal_memory as temporal_memory
+import time
+import random
+random.seed(666)
 
 def calc_overlap(l1, l2):
-    overlap = 0
-    for item in l1:
-        overlap += item in l2
+    overlap = l1.multiply(l2).sum()
+    # overlap = 0
+    # for item in l1:
+    #     overlap += item in l2
     return overlap
 
 n_inputs = 60
 input_size = (n_inputs,)
 input_size_flat = np.prod(input_size)
+tm_size = (2048*32,1)
 
-
-inputs = np.zeros(input_size, dtype=bool)
-perms = sp.get_sp(input_size_flat)
-inputs[:20] = True
-act1 = np.sort(sp.get_active_cols(inputs, perms))
-
-tempmem = tm.TemporalMemory()
+sp = spatial_pooler.SpatialPooler(input_size)
+tm = temporal_memory.TemporalMemory()
 step = 0
-act_cells1 = []
-act_cells2 = []
-while (True):
-    step += 1
-    #inputs = np.random.choice(a=[False, True], size=input_size, p=[0.9, 0.1])
-    inputs = np.zeros(input_size, dtype=bool)
-    if step % 4 == 0:
-        inputs[-5:] = True
-    elif step % 4 == 1 or step % 4 == 3:
-        inputs[:5] = True
-    else:
-        inputs[-10:-5] = True
+act_cells1 = csr_matrix(tm_size, dtype=np.bool)
+act_cells2 = csr_matrix(tm_size, dtype=np.bool)
+act_cells3 = csr_matrix(tm_size, dtype=np.bool)
+act_cells4 = csr_matrix(tm_size, dtype=np.bool)
+steptotal = 0
 
-    activated = sp.get_active_cols(inputs, perms)
-    perms = sp.reinforce(inputs, perms, activated)
+from pycallgraph import PyCallGraph
+from pycallgraph.output import GraphvizOutput
 
-    active_cells = tempmem.step(activated)
-    if step % 4 == 1:
-        print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells1), len(active_cells)))
-        print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells2), len(active_cells)))
-        act_cells1 = active_cells[:]
-    elif step % 4 == 3:
-        print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells2), len(active_cells)))
-        print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells1), len(active_cells)))
-        act_cells2 = active_cells[:]
 
-    #print(np.sort(activated))
-    # if step % 100 == 0:
-    #     #print(step)
-    #     inputs = np.zeros(input_size, dtype=bool)
-    #     inputs[0:20] = True
-    #     act2 = np.sort(sp.get_active_cols(inputs, perms))
-    # 
-    #     overlaps = 0
-    #     for val in act1:
-    #         overlaps += 1 if val in act2 else 0
-    #     # print(act1, act2)
-    #     print(overlaps)
+#with PyCallGraph(output=GraphvizOutput()):
+init_sp_out = None
+first = None
+start = time.time()
+while steptotal < 100:
+        steptotal += 1
+        step = (step + 1) % 8
+        inputs = np.zeros(input_size, dtype=bool)
 
-#print(permanences)
+        # if step == 0:
+        #     inputs[0:10] = True
+        # elif step == 4:
+        #     inputs[10:20] = True
+        # elif step== 1 or step == 5:
+        #     inputs[20:30] = True
+        # elif step == 2 or step == 6:
+        #     inputs[30:40] = True
+        # elif step == 3:
+        #     inputs[40:50] = True
+        # elif step == 7:
+        #     inputs[50:60] = True
+        inputs[:10] = True
+        activated = sp.step(inputs)
+        if first is None:
+            first = activated
+        activated = first
+        #print(activated)
+        active_cells = tm.step(activated)
+        #active_cells = csr_matrix(activated, dtype=np.bool)
+        #print(steptotal)
+
+        if step == 2:
+            print("Same input:")
+            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
+            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
+            act_cells1 = active_cells
+        elif step  == 6:
+            print("Same input:")
+            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
+            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
+            act_cells2 = active_cells
+        elif step == 3:
+            print("Different input:")
+            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells3), active_cells.getnnz()))
+            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells4), active_cells.getnnz()))
+            act_cells3 = active_cells
+        elif step  == 7:
+            print("Different input:")
+            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells4), active_cells.getnnz()))
+            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells3), active_cells.getnnz()))
+            act_cells4 = active_cells
+
+end = time.time()
+print(end-start)
+with PyCallGraph(output=GraphvizOutput()):
+    while steptotal < 10:
+        steptotal += 1
+        step = (step + 1) % 8
+        inputs = np.zeros(input_size, dtype=bool)
+
+        # if step == 0:
+        #     inputs[0:10] = True
+        # elif step == 4:
+        #     inputs[10:20] = True
+        # elif step== 1 or step == 5:
+        #     inputs[20:30] = True
+        # elif step == 2 or step == 6:
+        #     inputs[30:40] = True
+        # elif step == 3:
+        #     inputs[40:50] = True
+        # elif step == 7:
+        #     inputs[50:60] = True
+        inputs[:10] = True
+        activated = sp.step(inputs)
+
+        active_cells = tm.step(activated)
+        #print(steptotal)
+        if step == 3:
+            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
+            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
+            act_cells1 = active_cells
+        elif step  == 7:
+            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
+            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
+            act_cells2 = active_cells
