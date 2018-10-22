@@ -4,13 +4,11 @@ import pyHTM3.spatial_pooler as spatial_pooler
 import pyHTM3.temporal_memory as temporal_memory
 import time
 import random
-random.seed(666)
+random.seed(1234)
 
 def calc_overlap(l1, l2):
     overlap = l1.multiply(l2).sum()
-    # overlap = 0
-    # for item in l1:
-    #     overlap += item in l2
+
     return overlap
 
 n_inputs = 60
@@ -54,39 +52,39 @@ while steptotal < 100:
         #     inputs[50:60] = True
         inputs[:10] = True
         activated = sp.step(inputs)
-        if first is None:
-            first = activated
-        activated = first
+        #if first is None:
+        #    first = activated
+        #activated = first
         #print(activated)
         active_cells = tm.step(activated)
         #active_cells = csr_matrix(activated, dtype=np.bool)
         #print(steptotal)
 
-        if step == 2:
-            print("Same input:")
-            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
-            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
-            act_cells1 = active_cells
-        elif step  == 6:
-            print("Same input:")
-            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
-            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
-            act_cells2 = active_cells
-        elif step == 3:
-            print("Different input:")
-            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells3), active_cells.getnnz()))
-            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells4), active_cells.getnnz()))
-            act_cells3 = active_cells
-        elif step  == 7:
-            print("Different input:")
-            print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells4), active_cells.getnnz()))
-            print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells3), active_cells.getnnz()))
-            act_cells4 = active_cells
+        # if step == 2:
+        #     print("Same input:")
+        #     print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
+        #     print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
+        #     act_cells1 = active_cells
+        # elif step  == 6:
+        #     print("Same input:")
+        #     print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells2), active_cells.getnnz()))
+        #     print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells1), active_cells.getnnz()))
+        #     act_cells2 = active_cells
+        # elif step == 3:
+        #     print("Different input:")
+        #     print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells3), active_cells.getnnz()))
+        #     print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells4), active_cells.getnnz()))
+        #     act_cells3 = active_cells
+        # elif step  == 7:
+        #     print("Different input:")
+        #     print("Good: {} out of {}".format(calc_overlap(active_cells, act_cells4), active_cells.getnnz()))
+        #     print("Bad: {} out of {}".format(calc_overlap(active_cells, act_cells3), active_cells.getnnz()))
+        #     act_cells4 = active_cells
 
 end = time.time()
 print(end-start)
 with PyCallGraph(output=GraphvizOutput()):
-    while steptotal < 10:
+    while steptotal < 0:
         steptotal += 1
         step = (step + 1) % 8
         inputs = np.zeros(input_size, dtype=bool)
