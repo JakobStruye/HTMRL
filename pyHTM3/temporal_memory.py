@@ -3,19 +3,19 @@ import numpy as np
 import random
 from collections import defaultdict
 
-np.random.seed(1234)
+import pyHTM3.log as log
 
 cells_per_col = 32
 
 activation_thresh = 16
-initial_perm = 0.3
-connected_perm = 0.25  # 0.5
+initial_perm = 0.31
+connected_perm = 0.305  # 0.5
 learning_thresh = 12
 learning_enabled = True
 
 perm_inc_step = 0.01
-perm_dec_step = 0.001
-perm_dec_predict_step = 0.0005
+perm_dec_step = 0.00#1
+perm_dec_predict_step = 0.000#5
 # max_seg set very low right now: serious impact on performance; should autoscale internally
 max_segments_per_cell = 2
 max_synapses_per_segment = 32
@@ -150,7 +150,6 @@ class TemporalMemory(object):
             # Nothing left to grow to
             return
         count = min(unconnected.size, count)
-
         # Pick targets at random
         for ind in np.random.choice(unconnected, count):
             # Store where to grow to, actually grow them all together later on for efficiency
@@ -210,12 +209,13 @@ class TemporalMemory(object):
         """
         At least one activate segment in this activated column, activate all cells with active segment
         """
-
-        for idx in self.get_activated_segs_for_col(col):
+        if log.has_trace():
+            log.trace("Active col has {} active segs".format(self.get_activated_segs_for_col(col).getnnz()))
+        for idx in find(self.get_activated_segs_for_col(col))[1]:
             cell = idx // max_segments_per_cell
             seg_idx = idx % max_segments_per_cell
-
             cell_idx = to_flat_tm(col, cell)
+
             # Actually apply later
             self.active_updates_buffer[0].append(True)
             self.active_updates_buffer[1].append(cell_idx)
@@ -230,6 +230,11 @@ class TemporalMemory(object):
                 # Actives_old_perms contains permanence increase value for previously active cells
                 # and the decrease value for previously inactive
                 data = [self.actives_old_perms[idx] for idx in existing_synapses]
+                if log.has_trace():
+
+                    data_arr = np.array(data)
+
+                    log.trace("active seg has {} inc {} dec for {} synapses".format(len(data_arr[data_arr > 0]), len(data_arr[data_arr < 0]), len(existing_synapses)))
                 self.permanence_updates_buffer[0].extend(data)
                 self.permanence_updates_buffer[1].extend(existing_synapses)
                 self.permanence_updates_buffer[2].extend(
@@ -237,6 +242,7 @@ class TemporalMemory(object):
 
                 new_syn_count = max_synapses_per_segment - self.active_pot_counts_old[
                     0, to_flat_segments(col, cell, seg_idx)]
+
                 if new_syn_count:
                     self.grow_synapses(col, cell, seg_idx, new_syn_count)
 
@@ -244,9 +250,8 @@ class TemporalMemory(object):
         """
         Gets the previous step's activated segment indices (flattened) for one column
         """
-        start = to_flat_segments(col, 0)
-        end = to_flat_segments(col + 1, 0)
-        return self.active_segs_old.indices[self.active_segs_old.indptr[start]:self.active_segs_old.indptr[end]]
+
+        return self.active_segs_old[:, to_flat_segments(col, 0):to_flat_segments(col + 1, 0)]
 
     def get_activated_segs_for_col_count(self, col):
         """
@@ -293,8 +298,8 @@ class TemporalMemory(object):
         """
 
         # Broadcasting pointwise multiplication, contains permanences of synapses to active cells
-        active_synapses = self.seg_matrix.multiply(self.actives_compiled)
 
+        active_synapses = self.seg_matrix.multiply(self.actives_compiled)
         connected_synapses = active_synapses.copy()  # Copy because we still need this version for potentials
         # Only considered connected if permanence is high enough
         connected_synapses.data[connected_synapses.data < connected_perm] = 0.0
@@ -354,6 +359,7 @@ class TemporalMemory(object):
                                  (self.winner_updates_buffer[1], len(self.winner_updates_buffer[1]) * [0])),
                                 shape=(tm_size_flat))
             modder.has_canonical_format = True  # Avoids sum_duplicates; not necessary here and slow
+
             self.winners = modder.tocsc()
 
     def step_end(self):
@@ -389,10 +395,21 @@ class TemporalMemory(object):
         self.winner_updates_buffer = [[], []]
         self.active_updates_buffer = [[], []]
 
+    def reset(self):
+        self.actives_old = csc_matrix(tm_size_flat, dtype=bool)
+        self.actives_old_t = self.actives_old.transpose().tocsc()
+        self.actives_old_dok = set(find(self.actives)[0])
+        self.winners_old = csc_matrix(tm_size_flat, dtype=bool)
+        self.active_segs_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+        self.matching_segs_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+        self.active_pot_counts_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+
+
     def step(self, activated_cols):
         """
         The full step: from SP active columns to TM active cells
         """
+
         for col in range(sp_size_flat):
             if col in activated_cols:
                 # For each active SP column, either...
