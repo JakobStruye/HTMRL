@@ -26,9 +26,6 @@ def test():
     act_cells4 = csr_matrix(tm_size, dtype=np.bool)
     steptotal = 0
 
-    from pycallgraph import PyCallGraph
-    from pycallgraph.output import GraphvizOutput
-
 
     start = time.time()
     while steptotal < 1000:

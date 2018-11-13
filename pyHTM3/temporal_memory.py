@@ -2,7 +2,6 @@ from scipy.sparse import csc_matrix, dok_matrix, find, coo_matrix
 import numpy as np
 import random
 from collections import defaultdict
-
 import pyHTM3.log as log
 
 cells_per_col = 32
@@ -25,7 +24,6 @@ sp_size_flat = np.prod(sp_size)
 
 tm_size = (sp_size_flat, cells_per_col)
 tm_size_flat = (np.prod(tm_size), 1)
-
 
 def to_flat_tm(col, cell):
     """
@@ -57,18 +55,15 @@ def unflatten_segments(flat):
 
 class TemporalMemory(object):
     def __init__(self):
-        self.cells = np.zeros(tm_size)
-        self.segments = np.empty_like(self.cells).tolist()
         self.actives_old = csc_matrix(tm_size_flat, dtype=bool)
-        self.actives_old_dok = set()
         self.actives = dok_matrix(tm_size_flat, dtype=bool)
         self.actives_compiled = None
         self.winners_old = csc_matrix(tm_size_flat, dtype=np.bool)
-        self.winners = dok_matrix(tm_size_flat, dtype=bool)
-        self.active_segs_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
-        self.active_segs = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
-        self.matching_segs_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
-        self.matching_segs = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+        self.winners = csc_matrix(tm_size_flat, dtype=bool)
+        self.active_segs_old = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
+        self.active_segs = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
+        self.matching_segs_old = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
+        self.matching_segs = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
 
         self.matches_per_col = np.zeros((sp_size_flat,))  # csc_matrix((1,sp_size_flat))
         self.actives_per_col = np.zeros((1, sp_size_flat))
@@ -111,7 +106,7 @@ class TemporalMemory(object):
                 minimum = this_len
                 mins = [i]
         # From those, pick one at random
-        return random.choice(mins)
+        return random.choice(mins) if len(mins) else None
 
     def get_best_matching_seg(self, col):
         """
@@ -119,12 +114,11 @@ class TemporalMemory(object):
         In case of ties, get the first one (??)
         """
         best_score = -1
-        _from = to_flat_segments(col, 0)
-        _to = to_flat_segments(col + 1, 0)
         best_cell = None
         best_seg = None
-        for idx in find(self.matching_segs_old[:, _from:_to])[1]:
-            (c, cell, seg_idx) = unflatten_segments(idx + _from)
+        #for idx in find(self.matching_segs_old[:, _from:_to])[1]:
+        for idx in self.matching_segs_old.indices[self.matching_segs_old.indptr[col]:self.matching_segs_old.indptr[col+1]]:
+            (c, cell, seg_idx) = unflatten_segments(idx + (col * cells_per_col * max_segments_per_cell))
 
             if self.active_pot_counts_old[0, idx] > best_score:
                 best_cell = cell
@@ -161,7 +155,6 @@ class TemporalMemory(object):
         """
         Burst all cells in an unpredicted column.
         """
-
         # Activate all cells in the col
         _from = to_flat_tm(col, 0)
         _to = to_flat_tm(col + 1, 0)
@@ -175,15 +168,20 @@ class TemporalMemory(object):
         else:
             # ...or if there are not with the least segments
             winner_cell = self.get_least_used_cell(col)
-            if learning_enabled:
+            if learning_enabled and winner_cell is not None:
                 # Grow a new segment because none matched this sequence
                 learning_seg = self.add_segment(col, winner_cell)
+            elif learning_enabled and winner_cell is None:
+                pass
+                #print("Ran out of segment space!")
+
 
         # Actually set the winner cell later on
-        self.winner_updates_buffer[0].append(True)
-        self.winner_updates_buffer[1].append(to_flat_tm(col, winner_cell))
+        if winner_cell is not None: #hotfix for low seg count
+            self.winner_updates_buffer[0].append(True)
+            self.winner_updates_buffer[1].append(to_flat_tm(col, winner_cell))
 
-        if learning_enabled:
+        if learning_enabled and winner_cell is not None:
 
             seg_idx = to_flat_segments(col, winner_cell, learning_seg)
             seg = self.seg_matrix.indices[self.seg_matrix.indptr[seg_idx]:self.seg_matrix.indptr[seg_idx + 1]]
@@ -210,12 +208,12 @@ class TemporalMemory(object):
         At least one activate segment in this activated column, activate all cells with active segment
         """
         if log.has_trace():
-            log.trace("Active col has {} active segs".format(self.get_activated_segs_for_col(col).getnnz()))
-        for idx in find(self.get_activated_segs_for_col(col))[1]:
+            log.trace("Active col has {} active segs".format(self.get_activated_segs_for_col_count(col)))
+        for idx in self.get_activated_segs_for_col(col):
+            #idx = idx + (col * cells_per_col * max_segments_per_cell)
             cell = idx // max_segments_per_cell
             seg_idx = idx % max_segments_per_cell
             cell_idx = to_flat_tm(col, cell)
-
             # Actually apply later
             self.active_updates_buffer[0].append(True)
             self.active_updates_buffer[1].append(cell_idx)
@@ -250,8 +248,8 @@ class TemporalMemory(object):
         """
         Gets the previous step's activated segment indices (flattened) for one column
         """
-
-        return self.active_segs_old[:, to_flat_segments(col, 0):to_flat_segments(col + 1, 0)]
+        return self.active_segs_old.indices[self.active_segs_old.indptr[col]:self.active_segs_old.indptr[col+1]]
+        #return self.active_segs_old[:, to_flat_segments(col, 0):to_flat_segments(col + 1, 0)]
 
     def get_activated_segs_for_col_count(self, col):
         """
@@ -265,7 +263,8 @@ class TemporalMemory(object):
         Gets the previous step's matching segment indices (flattened) for one column
 
         """
-        return self.matching_segs_old[:, to_flat_segments(col, 0):to_flat_segments(col + 1, 0)]
+        return self.matching_segs_old.indices[self.matching_segs_old.indptr[col]:self.matching_segs_old.indptr[col+1]]
+        #return self.matching_segs_old[:, to_flat_segments(col, 0):to_flat_segments(col + 1, 0)]
 
     def get_matching_segs_for_col_count(self, col):
         """
@@ -278,9 +277,9 @@ class TemporalMemory(object):
         Column was predicted to become active but didn't. Punish all synapses contributing to this prediction
         """
         if learning_enabled:
-            for match_idx in find(self.get_matching_segs_for_col(col))[1]:
+            for match_idx in self.get_matching_segs_for_col(col):
 
-                (c, cell, seg) = unflatten_segments(match_idx)
+                (c, cell, seg) = unflatten_segments(match_idx + col * (cells_per_col * max_segments_per_cell))
                 for idx in self.seg_matrix.indices[
                            self.seg_matrix.indptr[to_flat_segments(col, cell, seg)]: self.seg_matrix.indptr[
                                to_flat_segments(col, cell, seg + 1)]]:
@@ -311,7 +310,9 @@ class TemporalMemory(object):
         conn_syns_counts = connected_synapses.sum(axis=0)
         # Segment is only active if there are enough connected synapses
         conn_syns_counts[conn_syns_counts < activation_thresh] = 0
-        self.active_segs = csc_matrix(conn_syns_counts, dtype=bool)
+        #self.active_segs = csc_matrix(conn_syns_counts, dtype=bool)
+        self.active_segs = csc_matrix(conn_syns_counts.reshape((cells_per_col * max_segments_per_cell, sp_size_flat),
+                                                        order='F'), dtype=bool)
 
         # Any permanence is enough to be potential
         active_synapses.has_canonical_format = True # Avoids sum_duplicates; not necessary here and slow
@@ -322,12 +323,13 @@ class TemporalMemory(object):
         pot_syns_counts[pot_syns_counts < learning_thresh] = 0
         self.matching_segs = csc_matrix(pot_syns_counts, dtype=bool)
 
+        self.matching_segs = self.matching_segs.reshape((cells_per_col * max_segments_per_cell, sp_size_flat), order='F')
+        self.matching_segs = self.matching_segs.tocsc()
         # Reshape matrix to have 1 col per TM column instead of per cell, for easy counting
-        self.matches_per_col = np.asarray(
-            self.matching_segs.reshape((cells_per_col * max_segments_per_cell, sp_size_flat), order='F').sum(
+        self.matches_per_col = np.asarray(self.matching_segs
+            .sum(
                 axis=0)).ravel()
-        self.actives_per_col = self.active_segs.reshape((cells_per_col * max_segments_per_cell, sp_size_flat),
-                                                        order='F').sum(axis=0)
+        self.actives_per_col = self.active_segs.sum(axis=0)
 
     def update_synapses(self):
         """
@@ -369,24 +371,21 @@ class TemporalMemory(object):
         """
         self.actives_old = self.actives_compiled
         self.actives_old_t = self.actives_old.transpose().tocsc()
-        self.actives_old_dok = set(find(self.actives)[0])  # As set for efficient contains
 
         dense_acts = self.actives_compiled.todense()  # Not too big, can densify safely
         # List of cells: active ones replaced by increase in permanence, inactives by decrease
         self.actives_old_perms = \
         np.squeeze(dense_acts * perm_inc_step - np.invert(dense_acts) * perm_dec_step).tolist()[0]
 
-        self.actives = dok_matrix(tm_size_flat, dtype=bool)
         self.actives_compiled = None
 
-        self.winners_old = self.winners.tocsc()
-        self.winners = dok_matrix(tm_size_flat, dtype=bool)
+        self.winners_old = self.winners
 
         self.active_segs_old = self.active_segs
-        self.active_segs = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+        self.active_segs = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
 
         self.matching_segs_old = self.matching_segs
-        self.matching_segs = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+        self.matching_segs = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
 
         self.active_pot_counts_old = self.active_pot_counts
         self.active_pot_counts = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
@@ -398,18 +397,16 @@ class TemporalMemory(object):
     def reset(self):
         self.actives_old = csc_matrix(tm_size_flat, dtype=bool)
         self.actives_old_t = self.actives_old.transpose().tocsc()
-        self.actives_old_dok = set(find(self.actives)[0])
         self.winners_old = csc_matrix(tm_size_flat, dtype=bool)
-        self.active_segs_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
-        self.matching_segs_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
-        self.active_pot_counts_old = csc_matrix((1, tm_size_flat[0] * max_segments_per_cell))
+        self.active_segs_old = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
+        self.matching_segs_old = csc_matrix((cells_per_col * max_segments_per_cell, sp_size_flat))
+        self.active_pot_counts_old = dok_matrix((1, tm_size_flat[0] * max_segments_per_cell))
 
 
     def step(self, activated_cols):
         """
         The full step: from SP active columns to TM active cells
         """
-
         for col in range(sp_size_flat):
             if col in activated_cols:
                 # For each active SP column, either...
