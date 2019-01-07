@@ -60,7 +60,7 @@ class SpatialPooler:
         """
         Gets the indices of the activated columns
         """
-
+        print("get_acts")
         # Get all the active synapses.
         # impl: (because bool(nan) == True, filter those out manually
         connecteds = np.array((self.permanences - self.connected_perm_thresh).clip(min=0), dtype=bool) * (~ np.isnan(self.permanences))
