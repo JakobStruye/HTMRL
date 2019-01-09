@@ -6,20 +6,29 @@ import pyHTM3.log as log
 class SpatialPooler:
     def __init__(self, input_size):
 
+        self.i = 0
         self.size = 2048
         self.stimulus_thresh = 0 #not implemented
-        self.boost_strength = 0. #not implemented
-        self.init_synapse_count = 20
-        self.connected_perm_thresh = 0.2
+        self.init_synapse_count = 20 #TODO fraction of input size
+        self.connected_perm_thresh = 0.5
         self.active_columns_count = 40
 
         self.perm_inc_step = 0.01
         self.perm_dec_step = 0.005
-        self.perm_min = 0.0
-        self.perm_max = 1.0
+        self.perm_min = 0.01
+        self.perm_max = 1.01
 
         self.input_size = input_size
         self.input_size_flat = np.prod(input_size)
+
+        self.acts_n = 4
+        assert(self.size % self.acts_n == 0)
+        self.cells_per_act = int(self.size / self.acts_n)
+
+        self.active_duty_cycles = np.zeros(self.size)
+
+        self.boost_strength = 1.0
+        self.boost_factors = np.ones(self.size, dtype=np.float32)
 
         self.permanences = self._get_initialized_permanences()
 
@@ -60,14 +69,20 @@ class SpatialPooler:
         """
         Gets the indices of the activated columns
         """
-        print("get_acts")
         # Get all the active synapses.
         # impl: (because bool(nan) == True, filter those out manually
-        connecteds = np.array((self.permanences - self.connected_perm_thresh).clip(min=0), dtype=bool) * (~ np.isnan(self.permanences))
+        if self.boost_strength:
+            boost_perms = self.permanences * self.boost_factors
+        else:
+            boost_perms = self.permanences
+        connecteds = np.array((boost_perms - self.connected_perm_thresh).clip(min=0), dtype=bool) * (~ np.isnan(self.permanences))
 
+        #if self.i %200 == 0:
+        #    print(np.count_nonzero(np.isnan(boost_perms[np.nonzero(inputs)[0],:])), "out of", np.prod(boost_perms[np.nonzero(inputs)[0],:].shape), "with connected", np.count_nonzero(connecteds[np.nonzero(inputs)[0],:]))
         # Count the number of connected active input cells for each column
         conn_counts = np.dot(np.expand_dims(inputs, 0), np.array(connecteds, dtype=int))
         conn_counts = np.squeeze(conn_counts)
+
 
         # Get the top-k columns in terms of connected active input cells
         # impl: argpartition calculates the indices that sort arg0 such that
@@ -76,7 +91,8 @@ class SpatialPooler:
         activated = np.argpartition(- conn_counts, self.active_columns_count)[:self.active_columns_count, ]
         return activated
 
-    def _reinforce(self, inputs, activated):
+    def _reinforce(self, inputs, activated, action):
+        good_range = (self.cells_per_act * action, self.cells_per_act * (action + 1))
         # Synapses to active inputs may be positively reinforced, the others negatively
         inputs_pos = inputs * self.perm_inc_step
         inputs_neg = (inputs - 1) * self.perm_dec_step
@@ -86,13 +102,28 @@ class SpatialPooler:
         inputs_shift = np.expand_dims(inputs_shift, 1)
         # Reinforce only the synapses of the activated columns
         # impl: NaN + 1 == NaN, so all non-existing synapses don't get touched here
+        activated = [a for a in activated if good_range[0] <= a < good_range[1]]
+        inactivated = [a for a in activated if not good_range[0] <= a < good_range[1]]
         self.permanences[:,activated] = self.permanences[:,activated] + inputs_shift
+        self.permanences[:, inactivated] = self.permanences[:, inactivated] - inputs_shift
         self.permanences = self.permanences.clip(min=self.perm_min, max=self.perm_max)
 
-    def step(self, inputs, learn=True):
+
+    def _updateDutyCycle(self, activated_cols):
+        cols_dense = np.zeros(self.size, dtype=np.float32)
+        cols_dense[activated_cols] = 1.0
+        period = 1000 if self.i >= 1000 else self.i+1
+        self.active_duty_cycles = ((period-1.) * self.active_duty_cycles + cols_dense) / float(period)
+
+        self.boost_factors = np.exp((self.active_columns_count / float(self.size) - self.active_duty_cycles) * self.boost_strength)
+
+    def step(self, inputs, learn=True, act=None):
+        assert(not(learn and act is None))
         activated_cols = self._get_activated_cols(inputs)
         if learn:
-            self._reinforce(inputs, activated_cols)
+            self._reinforce(inputs, activated_cols, act)
+        self._updateDutyCycle(activated_cols)
+        self.i += 1
         return activated_cols
 
 
