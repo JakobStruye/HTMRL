@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("Agg")
 import spatial_pooler
 class Bandit:
     def __init__(self, k):
@@ -62,7 +64,7 @@ def encoding_to_action(encoding, actions, i=1):
 
 input_size = (60,)
 input_sparsity = 0.1
-k = 4
+k = 10
 
 fixed_input_indices = np.random.choice(input_size[0], round(input_size[0] * input_sparsity))
 fixed_input = np.zeros(input_size)
@@ -72,11 +74,12 @@ total_episodes = 100000 #Set total number of episodes to train agent on.
 e = 0.0 #Set the chance of taking a random action.
 
 
-repeats = 100
+repeats = 2000
 steps = 1000
 tot_rews = np.zeros((steps,))
 
 for repeat in range(repeats):
+    print(repeat)
     b = Bandit(k)
 
     sp = spatial_pooler.SpatialPooler(input_size)
@@ -86,8 +89,8 @@ for repeat in range(repeats):
     total_selections = np.zeros(k)
 
     for step in range(steps):
-        if step % 1000 == 0:
-            print(step)
+        #if step % 1000 == 0:
+        #    print(step)
         #Choose either a random action or one from our network.
         if np.random.rand(1) < e:
             action = np.random.randint(k)
@@ -122,6 +125,8 @@ for repeat in range(repeats):
 plt.plot(range(steps), tot_rews, alpha=0.5)
 best_count = 0
 repeat_rews = np.zeros((steps,))
+repeats = 2000
+
 for rep in range(repeats):
     rews = []
     b = Bandit(k)
@@ -131,13 +136,11 @@ for rep in range(repeats):
         reward = b.get_reward(action)
         best_count += 1 if b.is_best(action) else 0
         rews.append(reward)
-    repeat_rews += np.array(rews)
+    repeat_rews = (rep * repeat_rews + np.array(rews)) / (rep + 1)
 print("BEST:", best_count)
 plt.plot(range(steps), repeat_rews, alpha=0.5)
 for eps in [0.1]:
     results = repeat_greedy(10, eps, 1000, 2000)
     print(results.shape)
     plt.plot(range(1000), results, alpha=0.5)
-plt.show()
-
-plt.show()
+plt.savefig("plot.png")
