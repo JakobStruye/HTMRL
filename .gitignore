@@ -109,3 +109,5 @@ venv.bak/
 
 pycallgraph.png
 perf.svg
+
+output/

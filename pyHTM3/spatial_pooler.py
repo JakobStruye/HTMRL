@@ -3,15 +3,16 @@ import numpy as np
 import pyHTM3.log as log
 from collections import deque
 import statistics as stats
+import math
 #import os
 #np.random.seed(int(os.environ["MYRANDSEED"]))
 
 
 class SpatialPooler:
-    def __init__(self, input_size, acts_n):
+    def __init__(self, input_size, acts_n, boost_strength=1.0, reward_scaled_reinf=True, boost_scaled_reinf=False, only_reinforce_selected=True, normalize_rewards=True):
 
         self.i = 0
-        self.size = 2050
+        self.size = math.ceil(2048 / acts_n) * acts_n
         self.stimulus_thresh = 0 #not implemented
         self.init_synapse_count = 20 #TODO fraction of input size
         self.connected_perm_thresh = 0.5
@@ -26,18 +27,25 @@ class SpatialPooler:
         self.input_size_flat = np.prod(input_size)
 
         self.acts_n = acts_n
+        print(self.size, self.acts_n)
         assert(self.size % self.acts_n == 0)
         self.cells_per_act = int(self.size / self.acts_n)
 
         self.active_duty_cycles = np.zeros(self.size)
 
-        self.boost_strength = 1.0
+        self.boost_strength = boost_strength
         self.boost_factors = np.ones(self.size, dtype=np.float32)
 
         self.permanences = self._get_initialized_permanences()
 
         self._tie_break_scale = 0.00001
         self._tie_breaker = np.random.rand(self.size) * self._tie_break_scale
+
+        self.reward_scaled_reinf = reward_scaled_reinf
+        self.boost_scaled_reinf = boost_scaled_reinf
+        self.only_reinforce_selected = only_reinforce_selected
+        self.normalize_rewards = normalize_rewards
+
         self._rewards = deque(maxlen=1000)
         self._reinf_buf = None
 
@@ -77,8 +85,6 @@ class SpatialPooler:
     def _perms_to_activateds(self, inputs, perms):
         connecteds = np.array((perms - self.connected_perm_thresh).clip(min=0), dtype=bool) * (~ np.isnan(self.permanences))
 
-        #if self.i %200 == 0:
-        #    print(np.count_nonzero(np.isnan(boost_perms[np.nonzero(inputs)[0],:])), "out of", np.prod(boost_perms[np.nonzero(inputs)[0],:].shape), "with connected", np.count_nonzero(connecteds[np.nonzero(inputs)[0],:]))
         # Count the number of connected active input cells for each column
         conn_counts = np.dot(np.expand_dims(inputs, 0), np.array(connecteds, dtype=int))
         conn_counts = np.squeeze(conn_counts)
@@ -108,7 +114,7 @@ class SpatialPooler:
         return activated
 
     def _reinforce(self, inputs, activated, action, reward):
-        good_range = (self.cells_per_act * action, self.cells_per_act * (action + 1))
+        action_range = (self.cells_per_act * action, self.cells_per_act * (action + 1))
         # Synapses to active inputs may be positively reinforced, the others negatively
         inputs_pos = inputs * self.perm_inc_step
         inputs_neg = (inputs - 1) * self.perm_dec_step
@@ -116,16 +122,21 @@ class SpatialPooler:
         if log.has_trace():
             log.trace("Reinforcing with {} pos {} neg".format(len(inputs_shift[inputs_shift > 0]), len(inputs_shift[inputs_shift < 0])))
         inputs_shift = np.expand_dims(inputs_shift, 1)
-        inputs_shift *= reward
+        if self.reward_scaled_reinf:
+            inputs_shift *= reward
         # Reinforce only the synapses of the activated columns
         # impl: NaN + 1 == NaN, so all non-existing synapses don't get touched here
-        activated = [a for a in activated if good_range[0] <= a < good_range[1]]
+        activated = [a for a in activated if action_range[0] <= a < action_range[1]]
         #print("acts", activated, self.cells_per_act)
-        inactivated = [a for a in activated if not good_range[0] <= a < good_range[1]]
-        #boost_offset = np.ones((len(activated),)) if reward < 0 else self._get_normalized_boost()[activated]
-        boost_offset = np.ones((len(activated),))
+        inactivated = [a for a in activated if not action_range[0] <= a < action_range[1]]
+        if not self.boost_scaled_reinf or reward < 0:
+            boost_offset = np.ones((len(activated),))
+        else:
+            boost_offset = self._get_normalized_boost()[activated]
         self.permanences[:,activated] = self.permanences[:,activated] + inputs_shift * boost_offset
-        self.permanences[:, inactivated] = self.permanences[:, inactivated] - inputs_shift
+        if not self.only_reinforce_selected:
+            self.permanences[:, inactivated] = self.permanences[:, inactivated] - inputs_shift
+
         self.permanences = self.permanences.clip(min=self.perm_min, max=self.perm_max)
 
     def _get_normalized_boost(self):
@@ -140,7 +151,8 @@ class SpatialPooler:
         mean = stats.mean(self._rewards)
         stdev = stats.stdev(self._rewards) if len(self._rewards) > 1 else 1
         stdev = 1 if stdev == 0 else stdev
-        reward = (reward - mean) / stdev
+        if self.normalize_rewards:
+            reward = (reward - mean) / stdev
         (inputs, activated_cols) = self._reinf_buf
         self._reinf_buf = None
         self._reinforce(inputs, activated_cols, action, reward)

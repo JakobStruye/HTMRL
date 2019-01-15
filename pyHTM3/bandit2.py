@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 import pyHTM3.spatial_pooler as spatial_pooler
-#import gym
-#from gym import spaces
-#import os
-#np.random.seed(int(os.environ["MYRANDSEED"]))
+import yaml
+import os
+import datetime
+import pickle
 
 class Bandit():#gym.Env):
     def __init__(self, k):
@@ -40,11 +40,59 @@ class Bandit():#gym.Env):
     def reset(self):
         return [0]
 
+def run_htmrl(bandit_config, steps, htmrl_config):
+    k = bandit_config["k"]
+    b = Bandit(k)
+
+    input_size = (htmrl_config["input_size"],)
+    input_sparsity = htmrl_config["input_sparsity"]
+
+    fixed_input_indices = np.random.choice(input_size[0], round(input_size[0] * input_sparsity))
+    fixed_input = np.zeros(input_size)
+    fixed_input[fixed_input_indices] = 1
+
+    boost_strength = float(htmrl_config["boost_strength"])
+    only_reinforce_selected = bool(htmrl_config["only_reinforce_selected"])
+    reward_scaled_reinf = bool(htmrl_config["reward_scaled_reinf"])
+    normalized_rewards =  bool(htmrl_config["normalized_rewards"])
+    boost_scaled_reinf = bool(htmrl_config["boost_scaled_reinf"])
+
+    sp = spatial_pooler.SpatialPooler(input_size, k, boost_strength=boost_strength,
+                                      only_reinforce_selected=only_reinforce_selected,
+                                      reward_scaled_reinf=reward_scaled_reinf, normalize_rewards=normalized_rewards,
+                                      boost_scaled_reinf=boost_scaled_reinf)
+    rews = []
+    actions = []
+    best_count = 0
+    total_reward = np.zeros(k)  # Set scoreboard for bandits to 0.
+    total_selections = np.zeros(k)
+
+    for step in range(steps):
+        encoding = sp.step(fixed_input)
+        action = encoding_to_action(encoding, k, step)
+        net_weight = action
+
+        reward = b.get_reward(action)  # Get our reward from picking one of the bandits.
+
+        best_count += 1 if b.is_best(action) else 0
+
+        sp.reinforce(action, reward)
+        # Update our running tally of scores.
+        total_reward[action] += reward
+        total_selections[action] += 1
+        rews.append(reward)
+        actions.append(action)
+        # if (step == 199 and best_count <100):
+        #    print(action, b.arms, total_selections)
+    print("BEST:", best_count)
+    return (rews, actions, b.arms)
 
 
-def run_greedy(k, eps, steps):
+def run_greedy(bandit_config, steps, eps):
+    k = bandit_config["k"]
     b = Bandit(k)
     rews = []
+    actions = []
     sample_avgs = np.zeros((k,))
     sample_counts = np.zeros((k,))
     for step in range(steps):
@@ -58,13 +106,37 @@ def run_greedy(k, eps, steps):
         sample_avgs[selection] = (sample_count * sample_avg + rew) / (sample_count + 1)
         sample_counts[selection] += 1
         rews.append(rew)
-    return np.array(rews)
+        actions.append(selection)
+    return (np.array(rews), actions, b.arms)
 
-def repeat_greedy(k, eps, steps, repeats):
+def run_random(bandit_config, steps):
+    rews = []
+    actions = []
+    k = bandit_config["k"]
+    b = Bandit(k)
+    for step in range(steps):
+        action = np.random.randint(k)
+        reward = b.get_reward(action)
+        rews.append(reward)
+        actions.append(action)
+    return (np.array(rews), actions, b.arms)
+
+
+def repeat_algo(bandit_config, steps, repeats, algo, outfile, **kwargs):
     avg_rews = np.zeros((steps,))
+    all_rews = []
+    all_acts = []
+    all_arms = []
     for i in range(repeats):
-        new_rews = run_greedy(k,eps,steps)
+        (new_rews, new_actions, new_b) = algo(bandit_config, steps, **kwargs)
+        outfile.write(str(new_rews))
+        outfile.write(str(new_actions))
+        outfile.write(str(new_b))
+        #all_rews.append(new_rews)
+        #all_acts.append(new_actions)
+        #all_arms.append(new_b)
         avg_rews = (i * avg_rews + new_rews) / (i+1)
+
     return avg_rews
 
 #for eps in [0.1,0.01,0.0]:
@@ -83,87 +155,80 @@ def encoding_to_action(encoding, actions, i=1):
     #    print(counts)
     return counts.argmax()
 
+
+
 if __name__ == "__main__":
-    input_size = (60,)
-    input_sparsity = 0.1
-    k = 10
+    with open("config/bandit.yml", 'r') as stream:
+        try:
+            yml = yaml.load(stream)
+            config_main = yml["general"]
+            bandit_main = yml["bandit"]
+            algorithms_main = yml["algorithms"]
+            experiments = yml["experiments"]
+            print(yml)
+        except yaml.YAMLError as exc:
+            print(exc)
 
-    fixed_input_indices = np.random.choice(input_size[0], round(input_size[0] * input_sparsity))
-    fixed_input = np.zeros(input_size)
-    fixed_input[fixed_input_indices] = 1
 
-    total_episodes = 100000 #Set total number of episodes to train agent on.
-    e = 0.0 #Set the chance of taking a random action.
+    outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
+
+    try:
+        os.makedirs(outdir)
+    except:
+        pass
 
 
-    repeats = 2000
-    steps = 6000
-    tot_rews = np.zeros((steps,))
 
-    for repeat in range(repeats):
-        print(repeat)
-        b = Bandit(k)
+    for exp_dict in experiments:
+        exp_name = list(exp_dict.keys())[0]
+        os.makedirs(outdir + exp_name)
+        exp = exp_dict[exp_name]
+        if exp is None:
+            exp = {} #ease of use
+        if "general" in exp:
+            config = {**config_main, **exp["general"]}
+        else:
+            config = config_main
+        if "bandit" in exp:
+            print(exp["bandit"])
+            bandit = {**bandit_main, **exp["bandit"]}
+        else:
+            bandit = bandit_main
+        k = bandit["k"]
+        repeats = config["repeats"]
+        steps = config["steps"]
 
-        sp = spatial_pooler.SpatialPooler(input_size, k)
-        rews = []
-        best_count = 0
-        total_reward = np.zeros(k)  # Set scoreboard for bandits to 0.
-        total_selections = np.zeros(k)
 
-        for step in range(steps):
-            #if step % 1000 == 0:
-            #    print(step)
-            #Choose either a random action or one from our network.
-            if np.random.rand(1) < e:
-                action = np.random.randint(k)
-            else:
-                encoding = sp.step(fixed_input)
-                action = encoding_to_action(encoding, k, step)
-                net_weight = action
+        #HTMRL
+        print(algorithms_main)
+        if "algorithms" in exp and "htmrl" in exp['algorithms']:
+            htmrl = {**algorithms_main["htmrl"], **exp["algorithms"]["htmrl"]}
+        else:
+            htmrl = algorithms_main["htmrl"]
 
-            reward = b.get_reward(action) #Get our reward from picking one of the bandits.
+        with open(outdir + exp_name + "/htmrl", "w") as rawfile:
+            results = repeat_algo(bandit, steps, repeats, run_htmrl, rawfile, htmrl_config=htmrl)
 
-            best_count += 1 if b.is_best(action) else 0
-            #if reward >= 0:
-            #sp.perm_inc_step = np.tanh(reward) * 0.01
-            #sp.perm_dec_step = np.tanh(reward) * 0.005
-            #else:
-            #    sp.perm_inc_step = reward * 0.01
-            #    sp.perm_dec_step = reward * 0.005
-            sp.reinforce(action, reward)
-            #Update our running tally of scores.
-            total_reward[action] += reward
-            total_selections[action] += 1
-            #if i % 50 == 0:
-            #    #print("Running reward for the " + str(num_bandits) + " bandits: " + str(total_reward))
-            #    #print(total_selections)
-            #    #print("CUR " + str(net_weight) + " BEST " + str(np.argmax(-np.array(bandits))))
-            #if i % 1000 == 0:
-            #    shuffle(bandits)
-            rews.append(reward)
-            if (step == 199 and best_count <100):
-                print(action, b.arms, total_selections)
-        print("BEST:", best_count)
-        tot_rews = (repeat * tot_rews + np.array(rews)) / (repeat + 1)
-    plt.plot(range(steps), tot_rews, alpha=0.5)
-    best_count = 0
-    repeat_rews = np.zeros((steps,))
-    repeats = 20
+        plt.plot(range(steps), results, alpha=0.5)
 
-    for rep in range(repeats):
-        rews = []
-        b = Bandit(k)
-        for step in range(steps):
-
-            action = np.random.randint(k)
-            reward = b.get_reward(action)
-            best_count += 1 if b.is_best(action) else 0
-            rews.append(reward)
-        repeat_rews = (rep * repeat_rews + np.array(rews)) / (rep + 1)
-    print("BEST:", best_count)
-    plt.plot(range(steps), repeat_rews, alpha=0.5)
-    for eps in [0.1]:
-        results = repeat_greedy(10, eps, steps, repeats)
+        #eps-greedy
+        if "algorithms" in exp and "eps" in exp['algorithms']:
+            eps = {**algorithms_main["eps"], **exp["algorithms"]["eps"]}
+        else:
+            eps = algorithms_main["eps"]
+        with open(outdir + exp_name + "/eps", "w") as rawfile:
+            results = repeat_algo(bandit, steps, repeats, run_greedy, rawfile, eps=eps["e"])
         print(results.shape)
         plt.plot(range(steps), results, alpha=0.5)
-    plt.savefig("plot.png")
+
+
+        #Random
+        with open(outdir + exp_name + "/random", "w") as rawfile:
+            results = repeat_algo(bandit, steps, repeats, run_random, rawfile)
+
+        plt.plot(range(steps), results, alpha=0.5)
+
+        with open(outdir + exp_name + "/config", "w") as writefile:
+            writefile.write("\n".join([str(config), str(bandit), str(htmrl), str(eps)]))
+        plt.savefig(outdir + exp_name + ".png")
+        plt.gcf().clear()
