@@ -3,21 +3,21 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 import pyHTM3.spatial_pooler as spatial_pooler
-import gym
-from gym import spaces
-import os
-np.random.seed(int(os.environ["MYRANDSEED"]))
+#import gym
+#from gym import spaces
+#import os
+#np.random.seed(int(os.environ["MYRANDSEED"]))
 
-class Bandit(gym.Env):
+class Bandit():#gym.Env):
     def __init__(self, k):
         self.k = k
         self.arms = np.random.normal(0,1,k)
         #self.arms = [-3,1,2.,3]
         self.best = self.arms.argmax()
 
-        self.num_envs = 1
-        self.observation_space = spaces.Discrete(1)
-        self.action_space = spaces.Discrete(k)
+        #self.num_envs = 1
+        #self.observation_space = spaces.Discrete(1)
+        #self.action_space = spaces.Discrete(k)
     def get_reward(self, i):
 
         return np.random.normal(self.arms[i], 1)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     print("BEST:", best_count)
     plt.plot(range(steps), repeat_rews, alpha=0.5)
     for eps in [0.1]:
-        results = repeat_greedy(10, eps, 1000, 2000)
+        results = repeat_greedy(10, eps, 2000, 2000)
         print(results.shape)
-        plt.plot(range(1000), results, alpha=0.5)
+        plt.plot(range(2000), results, alpha=0.5)
     plt.savefig("plot.png")

@@ -3,8 +3,8 @@ import numpy as np
 import pyHTM3.log as log
 from collections import deque
 import statistics as stats
-import os
-np.random.seed(int(os.environ["MYRANDSEED"]))
+#import os
+#np.random.seed(int(os.environ["MYRANDSEED"]))
 
 
 class SpatialPooler:
