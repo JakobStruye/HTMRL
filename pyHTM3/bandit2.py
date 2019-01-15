@@ -14,12 +14,17 @@ class Bandit():#gym.Env):
         self.arms = np.random.normal(0,1,k)
         #self.arms = [-3,1,2.,3]
         self.best = self.arms.argmax()
+        self.counter = 0
 
         #self.num_envs = 1
         #self.observation_space = spaces.Discrete(1)
         #self.action_space = spaces.Discrete(k)
     def get_reward(self, i):
 
+        self.counter += 1
+        if self.counter % 2000 == 0:
+            np.random.shuffle(self.arms)
+            self.best = self.arms.argmax()
         return np.random.normal(self.arms[i], 1)
         #return 1 if i == self.best else -1
         #if  np.random.randn(1) > self.arms[i]:
@@ -92,7 +97,7 @@ if __name__ == "__main__":
 
 
     repeats = 2000
-    steps = 2000
+    steps = 6000
     tot_rews = np.zeros((steps,))
 
     for repeat in range(repeats):
@@ -143,7 +148,7 @@ if __name__ == "__main__":
     plt.plot(range(steps), tot_rews, alpha=0.5)
     best_count = 0
     repeat_rews = np.zeros((steps,))
-    repeats = 2000
+    repeats = 20
 
     for rep in range(repeats):
         rews = []
@@ -158,7 +163,7 @@ if __name__ == "__main__":
     print("BEST:", best_count)
     plt.plot(range(steps), repeat_rews, alpha=0.5)
     for eps in [0.1]:
-        results = repeat_greedy(10, eps, 2000, 2000)
+        results = repeat_greedy(10, eps, steps, repeats)
         print(results.shape)
-        plt.plot(range(2000), results, alpha=0.5)
+        plt.plot(range(steps), results, alpha=0.5)
     plt.savefig("plot.png")
