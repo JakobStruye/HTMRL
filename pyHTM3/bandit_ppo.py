@@ -1,5 +1,5 @@
 from baselines.ppo2.ppo2 import learn
-from pyHTM3.bandit2 import Bandit
+from pyHTM3.run import Bandit
 import numpy as np
 p = dict()
 p[0] = dict()

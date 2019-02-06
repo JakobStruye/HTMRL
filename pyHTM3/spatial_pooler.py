@@ -35,6 +35,8 @@ class SpatialPooler:
 
         self.boost_strength = boost_strength
         self.boost_factors = np.ones(self.size, dtype=np.float32)
+        self.boost_anneal_until = 10000
+        self.boost_strength_init = boost_strength
 
         self.permanences = self._get_initialized_permanences()
 
@@ -159,6 +161,11 @@ class SpatialPooler:
 
 
     def _updateDutyCycle(self, activated_cols):
+
+        #anneal
+
+        if self.boost_anneal_until > 0:
+            self.boost_strength = max(0, self.boost_strength_init * (self.boost_anneal_until - self.i)/self.boost_anneal_until)
         cols_dense = np.zeros(self.size, dtype=np.float32)
         cols_dense[activated_cols] = 1.0
         period = 1000 if self.i >= 1000 else self.i+1
@@ -171,6 +178,7 @@ class SpatialPooler:
         self._tie_breaker = np.random.rand(self.size) * self._tie_break_scale
 
     def step(self, inputs, learn=True):
+
         activated_cols = self._get_activated_cols(inputs)
         if learn:
             #self._reinforce(inputs, activated_cols, act)
