@@ -14,7 +14,7 @@ class SpatialPooler:
         self.i = 0
         self.size = math.ceil(2048 / acts_n) * acts_n
         self.stimulus_thresh = 0 #not implemented
-        self.init_synapse_count = 20 #TODO fraction of input size
+        self.init_synapse_count = 200 #TODO fraction of input size
         self.connected_perm_thresh = 0.5
         self.active_columns_count = 40
 
@@ -186,6 +186,44 @@ class SpatialPooler:
         self._updateDutyCycle(activated_cols)
         self._init_next_step()
         return activated_cols
+
+
+
+
+    # For debugging and analysis
+    def visualize_cell_usage(self, all_possible_states, outdir):
+
+        import matplotlib.pyplot as plt
+
+        # Disable boosting
+        self.boost_strength = 0.0
+        self.boost_anneal_until = 0
+
+        # for visualization purposes, round up to square number
+        square_length = math.ceil(math.sqrt(self.size))
+        size_for_square = square_length ** 2
+        col_counts = np.zeros((size_for_square,))
+
+        for state in all_possible_states:
+            activateds = self.step(state, False)
+
+            col_counts[activateds] = col_counts[activateds] + 1
+
+        plt.figure(10)
+        fig, ax = plt.subplots(figsize=(20,20))
+
+        col_counts = np.reshape(col_counts, (square_length, square_length))
+        ax.matshow(col_counts, cmap=plt.cm.Reds, vmin=0, vmax=10)
+
+        for i in range(square_length):
+            for j in range(square_length):
+                c = col_counts[j, i]
+                if c > 0:
+                    ax.text(i, j, str(c), va='center', ha='center')
+        plt.savefig(outdir + "sp_usage.png")
+
+
+
 
 
 

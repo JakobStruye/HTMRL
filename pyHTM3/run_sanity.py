@@ -15,6 +15,7 @@ from pyHTM3.algo.qlearn import QLearn
 from pyHTM3.encoders.maze_encoder import MazeEncoder
 from pyHTM3.encoders.sanity_encoder import SanityEncoder
 
+outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
 
 def run_htmrl(env, steps, htmrl_config):
@@ -49,7 +50,8 @@ def run_htmrl(env, steps, htmrl_config):
     state = env.get_state()
 
     for step in range(steps):
-        #TEMP SANITY CHANGE
+        if step % 1000 == 0:
+            print(step)
         #input_enc = encoder.encode(state[0], state[1])
         input_enc = encoder.encode(state[0])
         encoding = sp.step(input_enc)
@@ -71,6 +73,13 @@ def run_htmrl(env, steps, htmrl_config):
         # if (step == 199 and best_count <100):
         #    print(action, b.arms, total_selections)
     print("BEST:", best_count)
+
+    # debugging
+    all_states = env.get_all_states()
+    all_encs = [encoder.encode(state[0]) for state in all_states]
+    sp.visualize_cell_usage(all_encs, outdir)
+
+
     return (rews, actions, env.get_debug_info())
 
 
@@ -183,7 +192,6 @@ if __name__ == "__main__":
             print(exc)
 
 
-    outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
     try:
         os.makedirs(outdir)
@@ -191,7 +199,7 @@ if __name__ == "__main__":
         pass
 
 
-
+    plt.figure(1)
     for exp_dict in experiments:
         exp_name = list(exp_dict.keys())[0]
         os.makedirs(outdir + exp_name)
@@ -225,7 +233,7 @@ if __name__ == "__main__":
         if htmrl is not None:
             with open(outdir + exp_name + "/htmrl", "w") as rawfile:
                 results = repeat_algo(env_init, env_config, steps, repeats, run_htmrl, rawfile, htmrl_config=htmrl)
-
+            plt.figure(1)
             plt.plot(range(steps), results, alpha=0.5, label="HTM")
 
         #eps-greedy

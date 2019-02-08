@@ -29,3 +29,6 @@ class Sanity():
 
     def get_debug_info(self):
         return None
+
+    def get_all_states(self):
+        return[np.array([loc,]) for loc in range(self.size)]
