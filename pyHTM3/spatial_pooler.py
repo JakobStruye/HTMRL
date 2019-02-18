@@ -18,8 +18,8 @@ class SpatialPooler:
         self.connected_perm_thresh = 0.5
         self.active_columns_count = 40
 
-        self.perm_inc_step = 0.01
-        self.perm_dec_step = 0.005
+        self.perm_inc_step = 0.05
+        self.perm_dec_step = 0.0#05
         self.perm_min = 0.01
         self.perm_max = 1.01
 
@@ -35,7 +35,7 @@ class SpatialPooler:
 
         self.boost_strength = boost_strength
         self.boost_factors = np.ones(self.size, dtype=np.float32)
-        self.boost_anneal_until = 10000
+        self.boost_anneal_until = 100000
         self.boost_strength_init = boost_strength
 
         self.permanences = self._get_initialized_permanences()

@@ -18,7 +18,7 @@ class Sanity():
         return self.current
 
     def do_action(self, action):
-        reward = 1. if self.optimals[self.current] == action else -1.
+        reward = 1. if self.optimals[self.current] == action else -1.0 #-0.
         self.current = np.random.randint(self.size, size=1)
         return (self.current, reward)
 

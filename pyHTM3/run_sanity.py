@@ -106,17 +106,19 @@ def run_greedy(env, steps, eps):
 def run_q(env, steps):
     rews = []
     actions = []
-    ql = QLearn((100,),4,0.0)
+    ql = QLearn((1000,),4,0.1)
     state = env.get_state()
     for step in range(steps):
         action = ql.get_action(state)
         next_state, rew = env.do_action(action)
         ql.learn(state, next_state, action, rew)
+        prev_state = state
         state = next_state
 
         rews.append(rew)
         actions.append(action)
-        print(rew)
+        if prev_state == 50:
+            print(prev_state, action, rew, ql.eps)
     return (np.array(rews), actions, env.get_debug_info())
 
 
@@ -138,6 +140,7 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
     all_acts = []
     all_arms = []
     for i in range(repeats):
+        print(env_init)
         env = env_init(env_config)
         (new_rews, new_actions, new_b) = algo(env, steps, **kwargs)
         outfile.write(str(new_rews))
@@ -206,6 +209,8 @@ if __name__ == "__main__":
         exp = exp_dict[exp_name]
         if exp is None:
             exp = {} #ease of use
+        if exp["algorithms"] is None:
+            exp["algorithms"] = {} #ease of use
         if "general" in exp:
             config = {**config_main, **exp["general"]}
         else:

@@ -110,3 +110,6 @@ pycallgraph.png
 perf.svg
 
 output/
+*out
+*err
+*png

@@ -92,7 +92,7 @@ def run_greedy(env, steps, eps):
 def run_q(env, steps):
     rews = []
     actions = []
-    ql = QLearn((7,7),4,0.0)
+    ql = QLearn((25,25),4,0.0)
     state = env.get_state()
     for step in range(steps):
         action = ql.get_action(state)
@@ -102,7 +102,7 @@ def run_q(env, steps):
 
         rews.append(rew)
         actions.append(action)
-        print(rew)
+        #print(rew)
     return (np.array(rews), actions, env.get_debug_info())
 
 
@@ -133,6 +133,8 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
         #all_acts.append(new_actions)
         #all_arms.append(new_b)
         new_rews = np.cumsum(new_rews)
+        new_rews[100:] = new_rews[100:] - new_rews[:-100]
+        new_rews /= 100.
         avg_rews = (i * avg_rews + new_rews) / (i+1)
 
     return avg_rews

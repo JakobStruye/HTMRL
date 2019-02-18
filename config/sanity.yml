@@ -1,12 +1,12 @@
 general:
   repeats: 1
-  steps: 10000
+  steps: 250000
 env:
   name: Sanity
-  size: 100
+  size: 1000
 algorithms:
   htmrl:
-      input_size: 2000
+      input_size: 20000
       input_sparsity: 0.1
       boost_strength: 0.0
       only_reinforce_selected: 0

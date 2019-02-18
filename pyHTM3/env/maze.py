@@ -90,6 +90,7 @@ class Maze():
             #    reward = 1
             #elif reward <= 0:
             #    reward = -1
+            print(reward)
 
             return (self.current, reward)
 

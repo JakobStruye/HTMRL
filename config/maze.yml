@@ -1,15 +1,15 @@
 general:
   repeats: 1
-  steps: 10000
+  steps: 250000
 env:
   name: Maze
-  size: 7
+  size: 25
   reward_shape_scale: 0.1
   visualize: False
   realtime: False
 algorithms:
   htmrl:
-      input_size: 980
+      input_size: 12500
       input_sparsity: 0.1
       boost_strength: 0.0
       only_reinforce_selected: 0

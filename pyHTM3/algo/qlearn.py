@@ -5,13 +5,22 @@ import time
 class QLearn:
     def __init__(self, dims, n_acts, eps):
         self.eps = eps
+        self.eps_orig = eps
+        self.eps_anneal_length = 1000000
+        self.i = 0
         self.n_acts = n_acts
         self.qtable = np.zeros(dims + (n_acts,))
         self._tie_break_scale = 0.00001
         self.lr = 0.001
-        self.discount = 0.99
+        self.discount = 0.#99
 
     def get_action(self, state):
+        if self.eps_anneal_length > 0:
+            self.eps = self.eps_orig * ((self.eps_anneal_length - self.i) / float(self.eps_anneal_length))
+        else:
+            self.eps = self.eps_orig
+        self.i += 1
+        #print(self.eps)
         if np.random.rand() <= self.eps:
             return np.random.randint(0,self.n_acts)
         else:
@@ -49,7 +58,7 @@ if __name__ == "__main__":
         if rew == 1.0:
             if prev_dur != (i - prev_goal):
                 prev_dur = i - prev_goal
-                print(prev_dur)
+                #print(prev_dur)
             prev_goal = i
             # founds += 1
             # print("FOUND "+ str(i))
