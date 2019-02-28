@@ -9,8 +9,10 @@ class Sanity():
     def __init__(self, env_config):
         size = env_config["size"]
         self.size = size
+        self.arms = env_config["arms"]
         self.current = np.array([0,])
-        self.optimals = np.random.choice(4,self.size)
+        self.optimals = np.random.choice(self.arms,self.size)
+        #self.optimals = np.array([330,184,71,179,260,212,170,341,91,77])
 
 
 
@@ -25,7 +27,7 @@ class Sanity():
     def is_done(self):
         return False
     def get_action_count(self):
-        return 4
+        return self.arms
 
     def get_debug_info(self):
         return None
