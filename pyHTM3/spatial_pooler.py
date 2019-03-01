@@ -12,7 +12,7 @@ class SpatialPooler:
     def __init__(self, input_size, acts_n, boost_strength=1.0, reward_scaled_reinf=True, boost_scaled_reinf=False, only_reinforce_selected=True, normalize_rewards=True):
         #np.random.seed(0) #Reset
         self.i = 0
-        self.size = max(1, math.floor(2048 / acts_n)) * acts_n
+        self.size = max(2, math.floor(2048 / acts_n)) * acts_n
         self.stimulus_thresh = 0 #not implemented
         self.init_synapse_count = 200 #TODO fraction of input size
         self.connected_perm_thresh = 0.5

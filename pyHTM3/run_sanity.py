@@ -1,4 +1,5 @@
 import numpy as np
+np.random.seed(0)
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
@@ -15,6 +16,7 @@ from pyHTM3.algo.qlearn import QLearn
 
 from pyHTM3.encoders.maze_encoder import MazeEncoder
 from pyHTM3.encoders.sanity_encoder import SanityEncoder
+
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
