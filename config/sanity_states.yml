@@ -1,6 +1,6 @@
 general:
-  repeats: 1
-  steps: 350000
+  repeats: 20
+  steps: 500000
 env:
   name: Sanity
   size: 20
@@ -44,33 +44,39 @@ experiments:
   #        normalized_rewards: 1
   #        only_reinforce_selected: 1
   #        boost_strength: 1.0  
-  -  s20:
+  -  s10:
       env:
-        size: 20
+        size: 10
       algorithms:
         htmrl:
-          input_size: 400
+          input_size: 200
+  -  s25:
+      env:
+        size: 25
+      algorithms:
+        htmrl:
+          input_size: 500
   -  s50:
       env:
         size: 50
       algorithms:
         htmrl:
           input_size: 1000
-  -  s250:
+  -  s150:
       env:
-        size: 250
+        size: 150
       algorithms:
         htmrl:
-          input_size: 5000
+          input_size: 3000
+  -  s400:
+      env:
+        size: 400
+      algorithms:
+        htmrl:
+          input_size: 8000
   -  s1000:
       env:
         size: 1000
       algorithms:
         htmrl:
           input_size: 20000
-  -  s1500:
-      env:
-        size: 1500
-      algorithms:
-        htmrl:
-          input_size: 30000

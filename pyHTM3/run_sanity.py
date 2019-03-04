@@ -205,8 +205,8 @@ def rate_predictions(states, actions, env, sp):
         print(state, action, best_action)
 
 if __name__ == "__main__":
-    #with open("config/sanity_states.yml", 'r') as stream:
-    with open("config/sanity.yml", 'r') as stream:
+    with open("config/sanity_states.yml", 'r') as stream:
+    #with open("config/sanity.yml", 'r') as stream:
         try:
             yml = yaml.load(stream)
             config_main = yml["general"]
