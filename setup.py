@@ -6,4 +6,10 @@ setup(name='pyHTM3',
       author='Jakob Struye',
       author_email='jakob.struye@uantwerpen.be',
       packages=['pyHTM3'],
+      install_requires=[
+         'numpy',
+         'matplotlib',
+         'pyyaml',
+         'pyglet',
+      ]
      )
