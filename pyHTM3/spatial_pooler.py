@@ -40,6 +40,9 @@ class SpatialPooler:
 
         self.permanences = self._get_initialized_permanences()
 
+        self.synapse_reinf_coeffs = np.zeros((self.input_size_flat, self.size), dtype=np.float)
+        self.discount = 0.0
+
         self._tie_break_scale = 0.00001
         self._tie_breaker = np.random.rand(self.size) * self._tie_break_scale
 
@@ -116,6 +119,9 @@ class SpatialPooler:
         return activated
 
     def _reinforce(self, inputs, activated, action, reward):
+
+
+
         action_range = (self.cells_per_act * action, self.cells_per_act * (action + 1))
         # Synapses to active inputs may be positively reinforced, the others negatively
         inputs_pos = inputs * self.perm_inc_step
@@ -131,11 +137,26 @@ class SpatialPooler:
         activated = [a for a in activated if action_range[0] <= a < action_range[1]]
         #print("acts", activated, self.cells_per_act)
         inactivated = [a for a in activated if not action_range[0] <= a < action_range[1]]
-        if not self.boost_scaled_reinf or reward < 0:
-            boost_offset = np.ones((len(activated),))
+
+        #update decaying coeffs
+        if self.discount > 0.0:
+            self.synapse_reinf_coeffs *= self.discount
+            self.synapse_reinf_coeffs[np.ix_(np.nonzero(inputs)[0].tolist(), activated)] += 1.0
+            self.synapse_reinf_coeffs.clip(max=2.0)
+
+        #if not self.boost_scaled_reinf or reward < 0:
+        #    boost_offset = np.ones((len(activated),))
+        #else:
+        #    boost_offset = self._get_normalized_boost()[activated]
+
+        if self.discount > 0.0:
+            self.permanences = self.permanences + self.synapse_reinf_coeffs * inputs_shift  # * boost_offset
         else:
-            boost_offset = self._get_normalized_boost()[activated]
-        self.permanences[:,activated] = self.permanences[:,activated] + inputs_shift * boost_offset
+            #same behavior, but more efficient
+            self.permanences[:,activated] = self.permanences[:,activated] + inputs_shift# * boost_offset
+
+
+
         if not self.only_reinforce_selected:
             self.permanences[:, inactivated] = self.permanences[:, inactivated] - inputs_shift
 
