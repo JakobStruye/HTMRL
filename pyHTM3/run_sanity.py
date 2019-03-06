@@ -1,4 +1,5 @@
 import numpy as np
+np.random.seed(0)
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
@@ -15,6 +16,7 @@ from pyHTM3.algo.qlearn import QLearn
 
 from pyHTM3.encoders.maze_encoder import MazeEncoder
 from pyHTM3.encoders.sanity_encoder import SanityEncoder
+
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
@@ -203,8 +205,8 @@ def rate_predictions(states, actions, env, sp):
         print(state, action, best_action)
 
 if __name__ == "__main__":
-    #with open("config/sanity_states.yml", 'r') as stream:
-    with open("config/sanity.yml", 'r') as stream:
+    with open("config/sanity_states.yml", 'r') as stream:
+    #with open("config/sanity.yml", 'r') as stream:
         try:
             yml = yaml.load(stream)
             config_main = yml["general"]
