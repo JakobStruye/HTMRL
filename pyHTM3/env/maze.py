@@ -6,7 +6,7 @@ import pyglet
 
 def action_to_direction(action):
     #0: UP, 1: RIGHT, 2: DOWN, 3: LEFT
-    action = (action + 2) % 4
+    #action = (action + 2) % 4
     if action == 0:
         return np.array([0,1])
     elif action == 1:
@@ -29,10 +29,12 @@ class Maze():
         size = env_config["size"]
         self.reward_shape_scale = env_config["reward_shape_scale"] if "reward_shape_scale" in env_config else 0.0
         # (0,0) is bottom left, (size-1,0) is bottom right
-        assert(size >= 4)
+        #assert(size >= 4)
         self.size = size
-        self.goal = np.array([size-2,size-2])
-        self.init = np.array([1,1])
+        #self.goal = np.array([size-2,size-2])
+        #self.init = np.array([1,1])
+        self.goal = np.array([size-1,size-1])
+        self.init = np.array([0,0])
         self.current = np.copy(self.init)
         self.sparse = False
         self.remaining = self._get_manhattan_distance(self.goal, self.current)
@@ -72,8 +74,10 @@ class Maze():
             time.sleep((self._prev_time + self._interval) - now)
         self._prev_time = now
         new_loc = self.current + action_to_direction(action)
+        #if self.current[0] == 0 and self.current[1] == 0:
+        #    print(action, self.current, new_loc)
         if not self._is_valid(new_loc):
-            return (self.current, -1.0) #Can't move
+            return (self.current, -0.5)#-1.0) #Can't move
         else:
             if np.array_equal(new_loc, self.goal):
                 reward = 1
@@ -82,6 +86,8 @@ class Maze():
             else:
                 new_remaining = self._get_manhattan_distance(self.goal, new_loc)
                 reward = (self.remaining - new_remaining) * self.reward_shape_scale
+                #TEMP HACK
+                #reward = -0.1
                 self.current = new_loc
                 self.remaining = new_remaining
 
@@ -90,7 +96,6 @@ class Maze():
             #    reward = 1
             #elif reward <= 0:
             #    reward = -1
-            print(reward)
 
             return (self.current, reward)
 

@@ -37,3 +37,6 @@ class Bandit():#gym.Env):
 
     def get_debug_info(self):
         return self.arms
+
+    def get_state(self):
+        return None
