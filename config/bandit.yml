@@ -1,6 +1,6 @@
 general:
-  repeats: 2
-  steps: 2000
+  repeats: 10
+  steps: 6000
 env:
   name: Bandit
   shuffles: 0
@@ -20,22 +20,22 @@ algorithms:
   random:
 
 experiments:
-  - default:
-  - rewscaled:
-      algorithms:
-        htmrl:
-          reward_scaled_reinf: 1
-  - normalized:
-      algorithms:
-        htmrl:
-          reward_scaled_reinf: 1
-          normalized_rewards: 1
-  -  only_selected:
-      algorithms:
-        htmrl:
-          reward_scaled_reinf: 1
-          normalized_rewards: 1
-          only_reinforce_selected: 1
+  #- default:
+  #- rewscaled:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #- normalized:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #-  only_selected:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #        only_reinforce_selected: 1
   -  boosted:
       algorithms:
         htmrl:

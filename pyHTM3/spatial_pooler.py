@@ -11,10 +11,14 @@ import math
 class SpatialPooler:
     def __init__(self, input_size, acts_n, boost_strength=1.0, reward_scaled_reinf=True, boost_scaled_reinf=False, only_reinforce_selected=True, normalize_rewards=True):
         #np.random.seed(0) #Reset
+
+        self.input_size = input_size
+        self.input_size_flat = np.prod(input_size)
+
         self.i = 0
         self.size = max(2, math.floor(2048 / acts_n)) * acts_n
         self.stimulus_thresh = 0 #not implemented
-        self.init_synapse_count = 200 #TODO fraction of input size
+        self.init_synapse_count = min(200, int(self.input_size_flat * 0.5)) #TODO fraction of input size
         self.connected_perm_thresh = 0.5
         self.active_columns_count = 40
 
@@ -23,8 +27,6 @@ class SpatialPooler:
         self.perm_min = 0.01
         self.perm_max = 1.01
 
-        self.input_size = input_size
-        self.input_size_flat = np.prod(input_size)
 
         self.acts_n = acts_n
         print(self.size, self.acts_n)
@@ -35,7 +37,7 @@ class SpatialPooler:
 
         self.boost_strength = boost_strength
         self.boost_factors = np.ones(self.size, dtype=np.float32)
-        self.boost_anneal_until = 500000
+        self.boost_anneal_until = 0
         self.boost_strength_init = boost_strength
 
         self.permanences = self._get_initialized_permanences()
@@ -142,7 +144,7 @@ class SpatialPooler:
         if self.discount > 0.0:
             self.synapse_reinf_coeffs *= self.discount
             self.synapse_reinf_coeffs[np.ix_(np.nonzero(inputs)[0].tolist(), activated)] += 1.0
-            self.synapse_reinf_coeffs.clip(max=2.0)
+            self.synapse_reinf_coeffs = self.synapse_reinf_coeffs.clip(max=2.0)
 
         #if not self.boost_scaled_reinf or reward < 0:
         #    boost_offset = np.ones((len(activated),))
@@ -150,6 +152,14 @@ class SpatialPooler:
         #    boost_offset = self._get_normalized_boost()[activated]
 
         if self.discount > 0.0:
+            # shape = np.nonzero(self.synapse_reinf_coeffs)[0].shape[0]
+            # if shape > 15000:
+            #     import sys
+            #     np.set_printoptions(threshold=sys.maxsize)
+            #     print(self.synapse_reinf_coeffs)
+            #     exit(1)
+
+
             self.permanences = self.permanences + self.synapse_reinf_coeffs * inputs_shift  # * boost_offset
         else:
             #same behavior, but more efficient
@@ -161,6 +171,10 @@ class SpatialPooler:
             self.permanences[:, inactivated] = self.permanences[:, inactivated] - inputs_shift
 
         self.permanences = self.permanences.clip(min=self.perm_min, max=self.perm_max)
+
+        #TEMP HACK
+        if self.discount > 0.0 and reward == 1.0:
+            self.synapse_reinf_coeffs = np.zeros((self.input_size_flat,self.size))
 
     def _get_normalized_boost(self):
         mean = stats.mean(self.boost_factors)
@@ -199,6 +213,10 @@ class SpatialPooler:
         self._tie_breaker = np.random.rand(self.size) * self._tie_break_scale
 
     def step(self, inputs, learn=True):
+
+
+        #print("TOTS", np.where(self.permanences > -1.0)[0].shape)
+        #print("CONNS", np.where(self.permanences > self.connected_perm_thresh)[0].shape)
 
         activated_cols = self._get_activated_cols(inputs)
         if learn:
