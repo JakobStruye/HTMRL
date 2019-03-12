@@ -1,6 +1,6 @@
 general:
-  repeats: 10
-  steps: 6000
+  repeats: 1000
+  steps: 10000
 env:
   name: Bandit
   shuffles: 0
