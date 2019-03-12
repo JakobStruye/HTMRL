@@ -18,9 +18,9 @@ class SpatialPooler:
         self.i = 0
         self.size = max(2, math.floor(2048 / acts_n)) * acts_n
         self.stimulus_thresh = 0 #not implemented
-        self.init_synapse_count = min(200, int(self.input_size_flat * 0.5)) #TODO fraction of input size
-        self.connected_perm_thresh = 0.5
         self.active_columns_count = 40
+        self.init_synapse_count = min(5*self.active_columns_count, int(self.input_size_flat * 0.5)) #TODO fraction of input size
+        self.connected_perm_thresh = 0.5
 
         self.perm_inc_step = 0.05
         self.perm_dec_step = 0.0#05
@@ -37,7 +37,7 @@ class SpatialPooler:
 
         self.boost_strength = boost_strength
         self.boost_factors = np.ones(self.size, dtype=np.float32)
-        self.boost_anneal_until = 0
+        self.boost_anneal_until = 0#500000
         self.boost_strength_init = boost_strength
 
         self.permanences = self._get_initialized_permanences()

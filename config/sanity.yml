@@ -1,5 +1,5 @@
 general:
-  repeats: 5
+  repeats: 1
   steps: 500000
 env:
   name: Sanity
@@ -44,26 +44,20 @@ experiments:
   #        normalized_rewards: 1
   #        only_reinforce_selected: 1
   #        boost_strength: 1.0  
-  #-  a4:
-  #    dummy: 0
-  #-  a10:
-  #    env:
-  #      arms: 10
-  #-  a50:
-  #    env:
-  #      arms: 50
-  #-  a100:
-  #    env:
-  #      arms: 100
-  #-  a300:
-  #    env:
-  #      arms: 300
-  #-  a1000:
-  #    env:
-  #      arms: 1000
-  #-  a2000:
-  #    env:
-  #      arms: 2000
-  -  a3000:
+  -  a4:
+      dummy: 0
+  -  a10:
       env:
-        arms: 3000
+        arms: 10
+  -  a30:
+      env:
+        arms: 30
+  -  a100:
+      env:
+        arms: 100
+  -  a300:
+      env:
+        arms: 300
+  -  a1024:
+      env:
+        arms: 1024
