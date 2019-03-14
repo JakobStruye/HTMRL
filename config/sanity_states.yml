@@ -1,0 +1,82 @@
+general:
+  repeats: 2
+  steps: 500000
+env:
+  name: Sanity
+  size: 20
+  arms: 4
+algorithms:
+  htmrl:
+      input_size: 400
+      input_sparsity: 0.1
+      boost_strength: 1.0
+      only_reinforce_selected: 1
+      reward_scaled_reinf: 1
+      normalized_rewards: 0
+      boost_scaled_reinf: 0
+      boost_anneal: False
+
+  #eps:
+  #    e: 0.1
+  random:
+
+experiments:
+  #- default:
+  #- rewscaled:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #- normalized:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #-  only_selected:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #        only_reinforce_selected: 1
+  #-  boosted:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #        only_reinforce_selected: 1
+  #        boost_strength: 1.0  
+  #-  s10:
+  #    env:
+  #      size: 10
+  #    algorithms:
+  #      htmrl:
+  #        input_size: 200
+  #-  s25:
+  #    env:
+  #      size: 25
+  #    algorithms:
+  #      htmrl:
+  #        input_size: 500
+  #-  s50:
+  #    env:
+  #      size: 50
+  #    algorithms:
+  #      htmrl:
+  #        input_size: 1000
+  #-  s150:
+  #    env:
+  #      size: 150
+  #    algorithms:
+  #      htmrl:
+  #        input_size: 3000
+  #-  s400:
+  #    env:
+  #      size: 400
+  #    algorithms:
+  #      htmrl:
+  #        input_size: 8000
+  -  s1000:
+      env:
+        size: 1000
+      algorithms:
+        htmrl:
+          input_size: 20000

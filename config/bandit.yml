@@ -1,0 +1,45 @@
+general:
+  repeats: 1000
+  steps: 10000
+env:
+  name: Bandit
+  shuffles: 0
+  k: 10
+algorithms:
+  htmrl:
+      input_size: 60
+      input_sparsity: 0.1
+      boost_strength: 0.0
+      only_reinforce_selected: 0
+      reward_scaled_reinf: 0
+      normalized_rewards: 0
+      boost_scaled_reinf: 0
+
+  eps:
+      e: 0.1
+  random:
+
+experiments:
+  #- default:
+  #- rewscaled:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #- normalized:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #-  only_selected:
+  #    algorithms:
+  #      htmrl:
+  #        reward_scaled_reinf: 1
+  #        normalized_rewards: 1
+  #        only_reinforce_selected: 1
+  -  boosted:
+      algorithms:
+        htmrl:
+          reward_scaled_reinf: 1
+          normalized_rewards: 1
+          only_reinforce_selected: 1
+          boost_strength: 1.0
