@@ -9,17 +9,18 @@ import math
 
 
 class SpatialPooler:
-    def __init__(self, input_size, acts_n, boost_strength=1.0, reward_scaled_reinf=True, boost_scaled_reinf=False, only_reinforce_selected=True, normalize_rewards=True):
+    def __init__(self, input_size, acts_n, boost_strength=1.0, reward_scaled_reinf=True, boost_scaled_reinf=False, only_reinforce_selected=True, normalize_rewards=True, cell_count=2048, active_count=40, boost_until=0, reward_window=1000):
         #np.random.seed(0) #Reset
 
         self.input_size = input_size
         self.input_size_flat = np.prod(input_size)
 
         self.i = 0
-        self.size = max(2, math.floor(2048 / acts_n)) * acts_n
+        self.size = max(2, math.floor(cell_count / acts_n)) * acts_n
         self.stimulus_thresh = 0 #not implemented
-        self.active_columns_count = 40
+        self.active_columns_count = active_count
         self.init_synapse_count = min(5*self.active_columns_count, int(self.input_size_flat * 0.5)) #TODO fraction of input size
+        self.init_synapse_count = max(1, self.init_synapse_count)
         self.connected_perm_thresh = 0.5
 
         self.perm_inc_step = 0.05
@@ -37,7 +38,7 @@ class SpatialPooler:
 
         self.boost_strength = boost_strength
         self.boost_factors = np.ones(self.size, dtype=np.float32)
-        self.boost_anneal_until = 0#500000
+        self.boost_anneal_until = boost_until#0#500000
         self.boost_strength_init = boost_strength
 
         self.permanences = self._get_initialized_permanences()
@@ -53,7 +54,7 @@ class SpatialPooler:
         self.only_reinforce_selected = only_reinforce_selected
         self.normalize_rewards = normalize_rewards
 
-        self._rewards = deque(maxlen=1000)
+        self._rewards = deque(maxlen=reward_window)
         self._reinf_buf = None
 
     def _get_initialized_permanences(self):
@@ -95,7 +96,7 @@ class SpatialPooler:
         # Count the number of connected active input cells for each column
         conn_counts = np.dot(np.expand_dims(inputs, 0), np.array(connecteds, dtype=int))
         conn_counts = np.squeeze(conn_counts)
-        conn_counts += self._tie_breaker
+        conn_counts = np.add(conn_counts, self._tie_breaker, casting='unsafe')
 
         # Get the top-k columns in terms of connected active input cells
         # impl: argpartition calculates the indices that sort arg0 such that

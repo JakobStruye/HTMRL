@@ -10,7 +10,7 @@ class Sanity():
         size = env_config["size"]
         self.size = size
         self.arms = env_config["arms"]
-        self.current = np.array([0,])
+        self.current = 0
         self.optimals = np.random.choice(self.arms,self.size)
         #self.optimals = np.array([330,184,71,179,260,212,170,341,91,77])
 
@@ -21,7 +21,7 @@ class Sanity():
 
     def do_action(self, action):
         reward = 1. if self.optimals[self.current] == action else -1.0 #-0.
-        self.current = np.random.randint(self.size, size=1)
+        self.current = np.random.randint(self.size, size=1)[0]
         return (self.current, reward)
 
     def is_done(self):

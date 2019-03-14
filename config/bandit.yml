@@ -7,39 +7,41 @@ env:
   k: 10
 algorithms:
   htmrl:
-      input_size: 60
-      input_sparsity: 0.1
-      boost_strength: 0.0
+      input_size: 6
+      input_sparsity: 1.0
+      cell_count: 2048
+      active_count: 40
+      boost_until: 0
+      reward_window: 1000
+      boost_strength: 1.0
       only_reinforce_selected: 0
-      reward_scaled_reinf: 0
-      normalized_rewards: 0
+      reward_scaled_reinf: 1
+      normalized_rewards: 1
       boost_scaled_reinf: 0
+
 
   eps:
       e: 0.1
   random:
 
 experiments:
-  #- default:
-  #- rewscaled:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #- normalized:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #        normalized_rewards: 1
-  #-  only_selected:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #        normalized_rewards: 1
-  #        only_reinforce_selected: 1
-  -  boosted:
-      algorithms:
-        htmrl:
-          reward_scaled_reinf: 1
-          normalized_rewards: 1
-          only_reinforce_selected: 1
-          boost_strength: 1.0
+  -  default:
+  -  longwindow:
+       algorithms:
+         htmrl:
+           reward_window: 2000
+  -  verylongwindow:
+       algorithms:
+         htmrl:
+           reward_window: 10000
+  -  small:
+       algorithms:
+         htmrl:
+           cell_count: 100
+           active_count: 10
+  -  tiny:
+       algorithms:
+         htmrl:
+           input_size: 1
+           cell_count: 20
+           active_count: 2

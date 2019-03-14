@@ -57,7 +57,7 @@ def run_htmrl(env, steps, htmrl_config):
         if step % 1000 == 0:
             print(step)
         #input_enc = encoder.encode(state[0], state[1])
-        input_enc = encoder.encode(state[0])
+        input_enc = encoder.encode(state)
         encoding = sp.step(input_enc)
         action = encoding_to_action(encoding, k, sp.size, step)
         net_weight = action
