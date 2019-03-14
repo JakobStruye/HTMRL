@@ -9,41 +9,17 @@ algorithms:
   htmrl:
       input_size: 400
       input_sparsity: 0.1
+      cell_count: 2048
+      active_count: 40
       boost_strength: 1.0
       only_reinforce_selected: 1
       reward_scaled_reinf: 1
       normalized_rewards: 0
       boost_scaled_reinf: 0
-      boost_anneal: False
-
-  #eps:
-  #    e: 0.1
-  random:
+      boost_until: 500000
+      reward_window: 1000
 
 experiments:
-  #- default:
-  #- rewscaled:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #- normalized:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #        normalized_rewards: 1
-  #-  only_selected:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #        normalized_rewards: 1
-  #        only_reinforce_selected: 1
-  #-  boosted:
-  #    algorithms:
-  #      htmrl:
-  #        reward_scaled_reinf: 1
-  #        normalized_rewards: 1
-  #        only_reinforce_selected: 1
-  #        boost_strength: 1.0  
   -  a4:
       dummy: 0
   -  a10:

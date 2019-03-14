@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 import pyHTM3.spatial_pooler as spatial_pooler
+import sys
 import yaml
 import os
 import datetime
@@ -16,7 +17,7 @@ from pyHTM3.algo.qlearn import QLearn
 
 from pyHTM3.encoders.maze_encoder import MazeEncoder
 from pyHTM3.encoders.sanity_encoder import SanityEncoder
-
+from pyHTM3.encoders.noop_encoder import NoopEncoder
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
@@ -26,21 +27,26 @@ def run_htmrl(env, steps, htmrl_config):
     input_size = (htmrl_config["input_size"],)
     input_sparsity = htmrl_config["input_sparsity"]
 
-    fixed_input_indices = np.random.choice(input_size[0], round(input_size[0] * input_sparsity))
-    fixed_input = np.zeros(input_size)
-    fixed_input[fixed_input_indices] = 1
+    #fixed_input_indices = np.random.cihoice(input_size[0], round(input_size[0] * input_sparsity))
+    #fixed_input = np.zeros(input_size)
+    #fixed_input[fixed_input_indices] = 1
 
     boost_strength = float(htmrl_config["boost_strength"])
     only_reinforce_selected = bool(htmrl_config["only_reinforce_selected"])
     reward_scaled_reinf = bool(htmrl_config["reward_scaled_reinf"])
     normalized_rewards =  bool(htmrl_config["normalized_rewards"])
     boost_scaled_reinf = bool(htmrl_config["boost_scaled_reinf"])
+    cell_count = int(htmrl_config["cell_count"])
+    active_count = int(htmrl_config["active_count"])
+    boost_until = int(htmrl_config["boost_until"])
+    reward_window = int(htmrl_config["reward_window"])
 
     k = env.get_action_count()
     sp = spatial_pooler.SpatialPooler(input_size, k, boost_strength=boost_strength,
                                       only_reinforce_selected=only_reinforce_selected,
                                       reward_scaled_reinf=reward_scaled_reinf, normalize_rewards=normalized_rewards,
-                                      boost_scaled_reinf=boost_scaled_reinf)
+                                      boost_scaled_reinf=boost_scaled_reinf, cell_count=cell_count, 
+                                      active_count=active_count, boost_until=boost_until, reward_window=reward_window)
     rews = []
     actions = []
     best_count = 0
@@ -49,15 +55,15 @@ def run_htmrl(env, steps, htmrl_config):
 
     #encoder = MazeEncoder(env_config["size"])
     #encoder = SanityEncoder(env_config["size"])
+    encoder = NoopEncoder(input_size)
 
-    #state = env.get_state()
+    state = env.get_state()
     latest_bad = 0
     start = time.time()
     for step in range(steps):
         if step % 1000 == 0:
             print(step)
-        #input_enc = encoder.encode(state[0], state[1])
-        input_enc = fixed_input #encoder.encode(state[0])
+        input_enc = encoder.encode(state)
         encoding = sp.step(input_enc)
         action = encoding_to_action(encoding, k, sp.size, step)
         net_weight = action
@@ -166,9 +172,9 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
         #all_rews.append(new_rews)
         #all_acts.append(new_actions)
         #all_arms.append(new_b)
-        new_rews = np.cumsum(new_rews)
-        new_rews[1:] = new_rews[1:] - new_rews[:-1]
-        new_rews /= 1.
+        #new_rews = np.cumsum(new_rews)
+        #new_rews[1:] = new_rews[1:] - new_rews[:-1]
+        #new_rews /= 1.
         for line in new_rews:
             outfile.write(str(line) + '\n')
         avg_rews = (i * avg_rews + new_rews) / (i+1)
@@ -205,7 +211,10 @@ def rate_predictions(states, actions, env, sp):
         print(state, action, best_action)
 
 if __name__ == "__main__":
-    with open("config/bandit.yml", 'r') as stream:
+    if len(sys.argv) < 2:
+        print("Please provide config filename as argument")
+        exit(1)
+    with open(sys.argv[1], 'r') as stream:
     #with open("config/sanity.yml", 'r') as stream:
         try:
             yml = yaml.load(stream)

@@ -7,9 +7,8 @@ setup(name='pyHTM3',
       author_email='jakob.struye@uantwerpen.be',
       packages=['pyHTM3'],
       install_requires=[
-         'numpy',
-         'matplotlib',
-         'pyyaml',
-         'pyglet',
+         'numpy==1.16.2',
+         'matplotlib==3.0.3',
+         'pyyaml==3.13',
       ]
      )
