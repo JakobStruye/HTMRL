@@ -15,9 +15,11 @@ from pyHTM3.env.maze import Maze
 from pyHTM3.env.sanity import Sanity
 from pyHTM3.algo.qlearn import QLearn
 
-from pyHTM3.encoders.maze_encoder import MazeEncoder
 from pyHTM3.encoders.sanity_encoder import SanityEncoder
-from pyHTM3.encoders.noop_encoder import NoopEncoder
+from pyHTM3.encoders import encoder_for_env
+
+from multiprocessing import Pool
+import psutil
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
@@ -55,7 +57,8 @@ def run_htmrl(env, steps, htmrl_config):
 
     #encoder = MazeEncoder(env_config["size"])
     #encoder = SanityEncoder(env_config["size"])
-    encoder = NoopEncoder(input_size)
+    #encoder = NoopEncoder(input_size)
+    encoder = encoder_for_env(env, htmrl_config)
 
     state = env.get_state()
     latest_bad = 0
@@ -162,10 +165,14 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
     all_rews = []
     all_acts = []
     all_arms = []
+    p = Pool(psutil.cpu_count(logical=False))
+    all_retvals = []
     for i in range(repeats):
         print(env_init)
         env = env_init(env_config)
-        (new_rews, new_actions, new_b) = algo(env, steps, **kwargs)
+        retval = p.apply_async(algo, [env, steps], kwargs)
+        #retval = algo(env, steps, **kwargs)
+        all_retvals.append(retval)
         #outfile.write(str(new_rews))
         #outfile.write(str(new_actions))
         #outfile.write(str(new_b))
@@ -175,12 +182,18 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
         #new_rews = np.cumsum(new_rews)
         #new_rews[1:] = new_rews[1:] - new_rews[:-1]
         #new_rews /= 1.
+
+        #avg_rews = (i * avg_rews + new_rews) / (i+1)
+    p.close()
+    p.join()
+    for retval in all_retvals:
+        new_rews = retval.get()[0]
+        #new_rews = retval[0]
         for line in new_rews:
             outfile.write(str(line) + '\n')
-        avg_rews = (i * avg_rews + new_rews) / (i+1)
     #outfile.write("###FINAL RESULTS###")
-    for line in avg_rews:
-        outfile.write(str(line) + '\n')
+    #for line in avg_rews:
+    #    outfile.write(str(line) + '\n')
     return avg_rews
 
 #for eps in [0.1,0.01,0.0]:
@@ -214,6 +227,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Please provide config filename as argument")
         exit(1)
+    if len(sys.argv) > 2:
+        enabled_experiments = sys.argv[2:]
+    else:
+        enabled_experiments = []
     with open(sys.argv[1], 'r') as stream:
     #with open("config/sanity.yml", 'r') as stream:
         try:
@@ -245,6 +262,8 @@ if __name__ == "__main__":
     plt.figure(1)
     for exp_dict in experiments:
         exp_name = list(exp_dict.keys())[0]
+        if enabled_experiments and exp_name not in enabled_experiments:
+            continue
         os.makedirs(outdir + exp_name)
         exp = exp_dict[exp_name]
         if exp is None:
@@ -275,7 +294,7 @@ if __name__ == "__main__":
         else:
             htmrl = None
         print(htmrl)
-        if htmrl is not None:
+        if htmrl is not None and not ("enabled" in htmrl and htmrl["enabled"] == 0):
             with open(outdir + exp_name + "/htmrl", "w") as rawfile:
                 results = repeat_algo(env_init, env_config, steps, repeats, run_htmrl, rawfile, htmrl_config=htmrl)
             plt.figure(1)
@@ -288,7 +307,7 @@ if __name__ == "__main__":
             eps = algorithms_main["eps"]
         else:
             eps = None
-        if eps is not None:
+        if eps is not None and not ("enabled" in eps and eps["enabled"] == 0):
             with open(outdir + exp_name + "/eps", "w") as rawfile:
                 results = repeat_algo(env_init, env_config, steps, repeats, run_greedy, rawfile, eps=eps["e"])
             print(results.shape)

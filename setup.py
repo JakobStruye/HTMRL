@@ -10,5 +10,6 @@ setup(name='pyHTM3',
          'numpy==1.16.2',
          'matplotlib==3.0.3',
          'pyyaml==3.13',
+          'psutil==5.5.0'
       ]
      )

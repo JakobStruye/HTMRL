@@ -3,10 +3,10 @@ general:
   steps: 10000
 env:
   name: Bandit
-  shuffles: 0
   k: 10
 algorithms:
   htmrl:
+      enabled: 1
       input_size: 6
       input_sparsity: 1.0
       cell_count: 2048
@@ -21,11 +21,21 @@ algorithms:
 
 
   eps:
+      enabled: 0
       e: 0.1
-  random:
 
 experiments:
   -  default:
+       algorithms:
+         eps:
+           enabled: 1
+  -  eps001:
+       algorithms:
+         htmrl:
+           enabled: 0
+         eps:
+           enabled: 1
+           e: 0.01
   -  longwindow:
        algorithms:
          htmrl:
