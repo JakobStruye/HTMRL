@@ -4,6 +4,7 @@ import os
 import numpy as np
 from scipy.signal import savgol_filter
 
+#CONFIGURE THIS TO GENERATE HTMRL VS EPS OR HTMRL VS CONSTRAINED-HTMRL PLOT
 secondgraph = True
 
 plt.rcParams.update({'font.size': 11})
