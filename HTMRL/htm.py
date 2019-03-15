@@ -1,11 +1,11 @@
 from scipy.sparse import csr_matrix
 import numpy as np
-import pyHTM3.spatial_pooler as spatial_pooler
-import pyHTM3.temporal_memory as temporal_memory
+import HTMRL.spatial_pooler as spatial_pooler
+import HTMRL.temporal_memory as temporal_memory
 import time
-import random
+
 from sys import argv
-import pyHTM3.log as log
+import HTMRL.log as log
 
 def calc_overlap(l1, l2):
     overlap = l1.multiply(l2).sum()

@@ -1,5 +1,5 @@
 general:
-  repeats: 2
+  repeats: 20
   steps: 500000
 env:
   name: Sanity
@@ -8,13 +8,15 @@ env:
 algorithms:
   htmrl:
       input_size: 400
-      input_sparsity: 0.1
+      cell_count: 2048
+      active_count: 40
       boost_strength: 1.0
       only_reinforce_selected: 1
       reward_scaled_reinf: 1
       normalized_rewards: 0
       boost_scaled_reinf: 0
-      boost_anneal: False
+      boost_until: 500000
+      reward_window: 1000
 
 experiments:
   -  s10:

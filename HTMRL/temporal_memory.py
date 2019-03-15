@@ -2,7 +2,7 @@ from scipy.sparse import csr_matrix, dok_matrix, coo_matrix, find
 import numpy as np
 import random
 from collections import defaultdict
-import pyHTM3.log as log
+import HTMRL.log as log
 import time
 cells_per_col = 32
 

@@ -12,17 +12,22 @@ logger.addHandler(handler)
 logging.addLevelName(5, "TRACE")
 logger.setLevel(20) #default
 
+
 def set_debug():
     logger.setLevel("DEBUG")
+
 
 def set_trace():
     logger.setLevel("TRACE")
 
+
 def has_debug():
     return logger.getEffectiveLevel() <= 10
 
+
 def has_trace():
     return logger.getEffectiveLevel() <= 5
+
 
 def debug(msg, *args):
 
@@ -30,6 +35,7 @@ def debug(msg, *args):
         for arg in args:
             msg += str(arg)
     logger.debug(msg)
+
 
 def trace(msg, *args):
 

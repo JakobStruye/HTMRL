@@ -1,21 +1,19 @@
 import numpy as np
-np.random.seed(0)
+#np.random.seed(0)
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
-import pyHTM3.spatial_pooler as spatial_pooler
+import HTMRL.spatial_pooler as spatial_pooler
 import yaml
 import os
 import datetime
 import time
 
-from pyHTM3.env.bandit import Bandit
-from pyHTM3.env.maze import Maze
-from pyHTM3.env.sanity import Sanity
-from pyHTM3.algo.qlearn import QLearn
+from HTMRL.env.bandit import Bandit
+from HTMRL.old.maze import Maze
+from HTMRL.old.qlearn import QLearn
 
-from pyHTM3.encoders.maze_encoder import MazeEncoder
-from pyHTM3.encoders.sanity_encoder import SanityEncoder
+from HTMRL.encoders.maze_encoder import MazeEncoder
 
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
@@ -47,32 +45,35 @@ def run_htmrl(env, steps, htmrl_config):
     total_reward = np.zeros(k)  # Set scoreboard for bandits to 0.
     total_selections = np.zeros(k)
 
-    #encoder = MazeEncoder(env_config["size"])
-    encoder = SanityEncoder(env_config["size"])
+    encoder = MazeEncoder(env_config["size"])
 
     state = env.get_state()
     latest_bad = 0
+    latest_good = 0
     start = time.time()
     for step in range(steps):
         if step % 1000 == 0:
             print(step)
-        #input_enc = encoder.encode(state[0], state[1])
-        input_enc = encoder.encode(state)
+        input_enc = encoder.encode(state[0], state[1])
         encoding = sp.step(input_enc)
-        action = encoding_to_action(encoding, k, sp.size, step)
+        action = encoding_to_action(encoding, k, sp.size, step, state)
         net_weight = action
 
         state, reward = env.do_action(action)  # Get our reward from picking one of the bandits.
-        if reward == 1.0:
-            if step - latest_bad > 100:
-                break
-        else:
-            latest_bad = step
+        if reward > 0.0:
+            print(step - latest_good, sp.boost_strength)
+            latest_good = step
+        #if reward == 1.0:
+        #    if step - latest_bad > 100:
+        #        break
+        #else:
+        #    latest_bad = step
 
         #best_count += 1 if env.is_best(action) else 0
+        #if step > 5000:
+        env.visualize()
 
-        #env.visualize()
-
+        #if step < 5000:
         sp.reinforce(action, reward)
         # Update our running tally of scores.
         total_reward[action] += reward
@@ -184,18 +185,20 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
 #plt.show()
 
 
-def encoding_to_action(encoding, actions, sp_size, i=1):
+def encoding_to_action(encoding, actions, sp_size, i=1, state=(0,0)):
     buckets = np.floor(encoding / (float(sp_size) / actions))
     buckets = buckets.astype(np.int32)
     counts = np.bincount(buckets)
     #print(counts)
-    #if i%200 == 0:
+    #if state[0] == 0 and state[1] == 0:
     #    print(counts)
+    # if i>5000:
+    #     print(counts)
     return counts.argmax()
 
 def rate_predictions(states, actions, env, sp):
     sp.boost_strength = 0.0
-    encoder = SanityEncoder(states)
+    encoder = MazeEncoder(states)
     sp.boost_anneal_until = 0
     for state in range(states):
         input_enc = encoder.encode(state)
@@ -205,8 +208,7 @@ def rate_predictions(states, actions, env, sp):
         print(state, action, best_action)
 
 if __name__ == "__main__":
-    with open("config/sanity_states.yml", 'r') as stream:
-    #with open("config/sanity.yml", 'r') as stream:
+    with open("config/maze.yml", 'r') as stream:
         try:
             yml = yaml.load(stream)
             config_main = yml["general"]

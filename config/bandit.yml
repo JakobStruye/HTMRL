@@ -8,7 +8,6 @@ algorithms:
   htmrl:
       enabled: 1
       input_size: 6
-      input_sparsity: 1.0
       cell_count: 2048
       active_count: 40
       boost_until: 0

@@ -1,42 +1,38 @@
 import numpy as np
-np.random.seed(0)
+
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use("Agg")
-import pyHTM3.spatial_pooler as spatial_pooler
+
+import HTMRL.spatial_pooler as spatial_pooler
 import sys
 import yaml
 import os
 import datetime
 import time
 
-from pyHTM3.env.bandit import Bandit
-from pyHTM3.env.maze import Maze
-from pyHTM3.env.sanity import Sanity
-from pyHTM3.algo.qlearn import QLearn
+from HTMRL.env.bandit import Bandit
+from HTMRL.env.sanity import Sanity
 
-from pyHTM3.encoders.sanity_encoder import SanityEncoder
-from pyHTM3.encoders import encoder_for_env
+from HTMRL.encoders.sanity_encoder import SanityEncoder
+from HTMRL.encoders import encoder_for_env
 
 from multiprocessing import Pool
 import psutil
+
+matplotlib.use("Agg")
+
+np.random.seed(0)
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
 
 
 def run_htmrl(env, steps, htmrl_config):
-
     input_size = (htmrl_config["input_size"],)
-    input_sparsity = htmrl_config["input_sparsity"]
-
-    #fixed_input_indices = np.random.cihoice(input_size[0], round(input_size[0] * input_sparsity))
-    #fixed_input = np.zeros(input_size)
-    #fixed_input[fixed_input_indices] = 1
 
     boost_strength = float(htmrl_config["boost_strength"])
     only_reinforce_selected = bool(htmrl_config["only_reinforce_selected"])
     reward_scaled_reinf = bool(htmrl_config["reward_scaled_reinf"])
-    normalized_rewards =  bool(htmrl_config["normalized_rewards"])
+    normalized_rewards = bool(htmrl_config["normalized_rewards"])
     boost_scaled_reinf = bool(htmrl_config["boost_scaled_reinf"])
     cell_count = int(htmrl_config["cell_count"])
     active_count = int(htmrl_config["active_count"])
@@ -47,17 +43,11 @@ def run_htmrl(env, steps, htmrl_config):
     sp = spatial_pooler.SpatialPooler(input_size, k, boost_strength=boost_strength,
                                       only_reinforce_selected=only_reinforce_selected,
                                       reward_scaled_reinf=reward_scaled_reinf, normalize_rewards=normalized_rewards,
-                                      boost_scaled_reinf=boost_scaled_reinf, cell_count=cell_count, 
+                                      boost_scaled_reinf=boost_scaled_reinf, cell_count=cell_count,
                                       active_count=active_count, boost_until=boost_until, reward_window=reward_window)
     rews = []
     actions = []
-    best_count = 0
-    total_reward = np.zeros(k)  # Set scoreboard for bandits to 0.
-    total_selections = np.zeros(k)
 
-    #encoder = MazeEncoder(env_config["size"])
-    #encoder = SanityEncoder(env_config["size"])
-    #encoder = NoopEncoder(input_size)
     encoder = encoder_for_env(env, htmrl_config)
 
     state = env.get_state()
@@ -69,7 +59,6 @@ def run_htmrl(env, steps, htmrl_config):
         input_enc = encoder.encode(state)
         encoding = sp.step(input_enc)
         action = encoding_to_action(encoding, k, sp.size, step)
-        net_weight = action
 
         state, reward = env.do_action(action)  # Get our reward from picking one of the bandits.
         if reward == 1.0:
@@ -78,29 +67,14 @@ def run_htmrl(env, steps, htmrl_config):
         else:
             latest_bad = step
 
-        #best_count += 1 if env.is_best(action) else 0
-
-        #env.visualize()
-
         sp.reinforce(action, reward)
         # Update our running tally of scores.
-        total_reward[action] += reward
-        total_selections[action] += 1
         rews.append(reward)
         actions.append(action)
-        # if (step == 199 and best_count <100):
-        #    print(action, b.arms, total_selections)
-    #print("BEST:", best_count)
 
-    # debugging
-    #all_states = env.get_all_states()
-    #all_encs = [encoder.encode(state[0]) for state in all_states]
-    #sp.visualize_cell_usage(all_encs, outdir)
-
-    #rate_predictions(env.size, k, env, sp)
 
     stop = time.time()
-    print("TIMER", str(stop-start), step)
+    print("TIMER", str(stop - start), step)
 
     if len(rews) < steps:
         print("Skipped", steps - len(rews))
@@ -116,8 +90,8 @@ def run_greedy(env, steps, eps):
     sample_avgs = np.zeros((k,))
     sample_counts = np.zeros((k,))
     for step in range(steps):
-        if np.random.uniform(0.,1.) <= eps:
-            selection = np.random.randint(0,k)
+        if np.random.uniform(0., 1.) <= eps:
+            selection = np.random.randint(0, k)
         else:
             selection = np.argmax(sample_avgs)
         state, rew = env.do_action(selection)
@@ -127,24 +101,6 @@ def run_greedy(env, steps, eps):
         sample_counts[selection] += 1
         rews.append(rew)
         actions.append(selection)
-    return (np.array(rews), actions, env.get_debug_info())
-
-def run_q(env, steps):
-    rews = []
-    actions = []
-    ql = QLearn((25,),200,0.1)
-    state = env.get_state()
-    for step in range(steps):
-        action = ql.get_action(state)
-        next_state, rew = env.do_action(action)
-        ql.learn(state, next_state, action, rew)
-        prev_state = state
-        state = next_state
-
-        rews.append(rew)
-        actions.append(action)
-        if prev_state == 50:
-            print(prev_state, action, rew, ql.eps)
     return (np.array(rews), actions, env.get_debug_info())
 
 
@@ -157,60 +113,38 @@ def run_random(env, steps):
         state, reward = env.do_action(action)
         rews.append(reward)
         actions.append(action)
-    return (np.array(rews), actions, env.get_debug_info())
+    return np.array(rews), actions, env.get_debug_info()
 
 
 def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
     avg_rews = np.zeros((steps,))
-    all_rews = []
-    all_acts = []
-    all_arms = []
+
     p = Pool(psutil.cpu_count(logical=False))
     all_retvals = []
     for i in range(repeats):
         print(env_init)
         env = env_init(env_config)
         retval = p.apply_async(algo, [env, steps], kwargs)
-        #retval = algo(env, steps, **kwargs)
         all_retvals.append(retval)
-        #outfile.write(str(new_rews))
-        #outfile.write(str(new_actions))
-        #outfile.write(str(new_b))
-        #all_rews.append(new_rews)
-        #all_acts.append(new_actions)
-        #all_arms.append(new_b)
-        #new_rews = np.cumsum(new_rews)
-        #new_rews[1:] = new_rews[1:] - new_rews[:-1]
-        #new_rews /= 1.
 
-        #avg_rews = (i * avg_rews + new_rews) / (i+1)
     p.close()
     p.join()
+
     for retval in all_retvals:
         new_rews = retval.get()[0]
-        #new_rews = retval[0]
         for line in new_rews:
             outfile.write(str(line) + '\n')
-    #outfile.write("###FINAL RESULTS###")
-    #for line in avg_rews:
-    #    outfile.write(str(line) + '\n')
-    return avg_rews
 
-#for eps in [0.1,0.01,0.0]:
-#    results = repeat_greedy(10, eps, 1000, 2000)
-#    print(results.shape)
-#    plt.plot(range(1000), results)
-#plt.show()
+    return avg_rews
 
 
 def encoding_to_action(encoding, actions, sp_size, i=1):
     buckets = np.floor(encoding / (float(sp_size) / actions))
     buckets = buckets.astype(np.int32)
     counts = np.bincount(buckets)
-    #print(counts)
-    #if i%200 == 0:
-    #    print(counts)
+
     return counts.argmax()
+
 
 def rate_predictions(states, actions, env, sp):
     sp.boost_strength = 0.0
@@ -223,6 +157,7 @@ def rate_predictions(states, actions, env, sp):
         best_action = env.optimals[state]
         print(state, action, best_action)
 
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Please provide config filename as argument")
@@ -232,15 +167,12 @@ if __name__ == "__main__":
     else:
         enabled_experiments = []
     with open(sys.argv[1], 'r') as stream:
-    #with open("config/sanity.yml", 'r') as stream:
         try:
             yml = yaml.load(stream)
             config_main = yml["general"]
             env_main = yml["env"]
             if env_main["name"] == "Bandit":
                 env_init = Bandit
-            elif env_main["name"] == "Maze":
-                env_init = Maze
             elif env_main["name"] == "Sanity":
                 env_init = Sanity
             else:
@@ -251,13 +183,10 @@ if __name__ == "__main__":
         except yaml.YAMLError as exc:
             print(exc)
 
-
-
     try:
         os.makedirs(outdir)
     except:
         pass
-
 
     plt.figure(1)
     for exp_dict in experiments:
@@ -267,9 +196,9 @@ if __name__ == "__main__":
         os.makedirs(outdir + exp_name)
         exp = exp_dict[exp_name]
         if exp is None:
-            exp = {} #ease of use
+            exp = {}  # ease of use
         if "algorithms" not in exp:
-            exp["algorithms"] = {} #ease of use
+            exp["algorithms"] = {}  # ease of use
         if "general" in exp:
             config = {**config_main, **exp["general"]}
         else:
@@ -281,12 +210,8 @@ if __name__ == "__main__":
         repeats = config["repeats"]
         steps = config["steps"]
 
-        #with open(outdir + exp_name + "/q", "w") as rawfile:
 
-        #    results = repeat_algo(env_init, env_config, steps, repeats, run_q, rawfile)
-        #plt.plot(range(steps), results, alpha=0.5, label="Q-learn")
-
-        #HTMRL
+        # HTMRL
         if "algorithms" in exp and "htmrl" in exp['algorithms']:
             htmrl = {**algorithms_main["htmrl"], **exp["algorithms"]["htmrl"]}
         elif "htmrl" in algorithms_main:
@@ -300,7 +225,7 @@ if __name__ == "__main__":
             plt.figure(1)
             plt.plot(range(steps), results, alpha=0.5, label="HTM")
 
-        #eps-greedy
+        # eps-greedy
         if "algorithms" in exp and "eps" in exp['algorithms']:
             eps = {**algorithms_main["eps"], **exp["algorithms"]["eps"]}
         elif "eps" in algorithms_main:
@@ -313,8 +238,7 @@ if __name__ == "__main__":
             print(results.shape)
             plt.plot(range(steps), results, alpha=0.5, label="eps-greedy")
 
-
-        #Random
+        # Random
         if "random" in algorithms_main:
             with open(outdir + exp_name + "/random", "w") as rawfile:
                 results = repeat_algo(env_init, env_config, steps, repeats, run_random, rawfile)
@@ -323,6 +247,7 @@ if __name__ == "__main__":
 
         with open(outdir + exp_name + "/config", "w") as writefile:
             writefile.write("\n".join([str(config), str(env_config), str(htmrl), str(eps)]))
+
         plt.legend()
         plt.savefig(outdir + exp_name + ".png")
         plt.gcf().clear()

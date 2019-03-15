@@ -1,5 +1,4 @@
 import numpy as np
-import pyglet
 import time
 
 class QLearn:
@@ -35,9 +34,8 @@ class QLearn:
 
 
 if __name__ == "__main__":
-    from pyglet.gl import gl
     ql = QLearn((10,10),4,0.00)
-    from pyHTM3.env.maze import Maze
+    from HTMRL.old.maze import Maze
     env = Maze({"size": 10, "visualize": True, "realtime": True})
     # action = ql.get_action(np.array([4,4]))
     # print(action)
