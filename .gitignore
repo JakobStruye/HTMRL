@@ -114,3 +114,4 @@ output/
 *err
 *png
 .idea/
+plots/*pdf
