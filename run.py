@@ -116,7 +116,13 @@ def run_random(env, steps):
     return np.array(rews), actions, env.get_debug_info()
 
 
+def repeat_algo_reprod(i, algo, env, steps, **kwargs):
+    np.random.seed(i)
+    return algo(env, steps, **kwargs)
+
 def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
+    #np.random.seed(0)
+
     avg_rews = np.zeros((steps,))
 
     p = Pool(psutil.cpu_count(logical=False))
@@ -124,7 +130,7 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
     for i in range(repeats):
         print(env_init)
         env = env_init(env_config)
-        retval = p.apply_async(algo, [env, steps], kwargs)
+        retval = p.apply_async(repeat_algo_reprod, [i, algo, env, steps], kwargs)
         all_retvals.append(retval)
 
     p.close()

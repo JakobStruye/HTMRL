@@ -21,18 +21,15 @@ algorithms:
 experiments:
   -  a4:
       dummy: 0
-  -  a10:
+  -  a16:
       env:
-        arms: 10
-  -  a30:
+        arms: 16
+  -  a64:
       env:
-        arms: 30
-  -  a100:
+        arms: 64
+  -  a256:
       env:
-        arms: 100
-  -  a300:
-      env:
-        arms: 300
+        arms: 256
   -  a1024:
       env:
         arms: 1024

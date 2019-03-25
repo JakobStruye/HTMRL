@@ -19,39 +19,33 @@ algorithms:
       reward_window: 1000
 
 experiments:
-  -  s10:
+  -  s4:
       env:
-        size: 10
+        size: 4
       algorithms:
         htmrl:
-          input_size: 200
-  -  s25:
+          input_size: 80
+  -  s16:
       env:
-        size: 25
+        size: 16
       algorithms:
         htmrl:
-          input_size: 500
-  -  s50:
+          input_size: 320
+  -  s64:
       env:
-        size: 50
+        size: 64
       algorithms:
         htmrl:
-          input_size: 1000
-  -  s150:
+          input_size: 1280
+  -  s256:
       env:
-        size: 150
+        size: 256
       algorithms:
         htmrl:
-          input_size: 3000
-  -  s400:
+          input_size: 5120
+  -  s1024:
       env:
-        size: 400
+        size: 1024
       algorithms:
         htmrl:
-          input_size: 8000
-  -  s1000:
-      env:
-        size: 1000
-      algorithms:
-        htmrl:
-          input_size: 20000
+          input_size: 20480
