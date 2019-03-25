@@ -4,6 +4,7 @@ import numpy as np
 from math import log
 plt.rcParams.update({'font.size': 11})
 
+#CONFIGURE THIS TO GENERATE PLOT FOR EITHER STATES OR ACTIONS
 isstates = True
 
 colors = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02"]
