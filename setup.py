@@ -7,9 +7,9 @@ setup(name='HTMRL',
       author_email='jakob.struye@uantwerpen.be',
       packages=['HTMRL'],
       install_requires=[
-         'numpy==1.16.2',
-         'matplotlib==3.0.3',
-         'pyyaml==3.13',
-         'psutil==5.5.0'
+         'numpy>=1.16.2',
+         'matplotlib>=3.0.3',
+         'pyyaml>=4.2b1',
+         'psutil>=5.5.0'
       ]
      )

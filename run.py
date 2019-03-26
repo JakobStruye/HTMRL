@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 import matplotlib.pyplot as plt
 import matplotlib
 
@@ -21,6 +21,7 @@ import psutil
 
 matplotlib.use("Agg")
 
+random.seed(0)
 np.random.seed(0)
 
 outdir = "output/" + datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + "/"
@@ -116,8 +117,10 @@ def run_random(env, steps):
     return np.array(rews), actions, env.get_debug_info()
 
 
-def repeat_algo_reprod(i, algo, env, steps, **kwargs):
+def repeat_algo_reprod(i, algo, env_config, steps, **kwargs):
+    random.seed(i)
     np.random.seed(i)
+    env = env_init(env_config)
     return algo(env, steps, **kwargs)
 
 def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
@@ -129,8 +132,7 @@ def repeat_algo(env_init, env_config, steps, repeats, algo, outfile, **kwargs):
     all_retvals = []
     for i in range(repeats):
         print(env_init)
-        env = env_init(env_config)
-        retval = p.apply_async(repeat_algo_reprod, [i, algo, env, steps], kwargs)
+        retval = p.apply_async(repeat_algo_reprod, [i, algo, env_config, steps], kwargs)
         all_retvals.append(retval)
 
     p.close()
