@@ -54,3 +54,7 @@ experiments:
            input_size: 1
            cell_count: 20
            active_count: 2
+  -  noboost:
+       algorithms:
+         htmrl:
+           boost_strength: 0.0
