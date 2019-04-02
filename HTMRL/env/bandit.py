@@ -7,12 +7,16 @@ class Bandit:
         self.arms = np.random.normal(0,1,self.k)
         self.best = self.arms.argmax()
         self.counter = 0
+        self.shuffle = False if "shuffle" not in config else False if config["shuffle"] == 0 else True
 
     def do_action(self, i):
 
         self.counter += 1
         if self.counter % 2000 == 0:
-            np.random.shuffle(self.arms)
+            if not self.shuffle:
+                self.arms = np.random.normal(0,1,self.k)
+            else:
+                np.random.shuffle(self.arms)
             self.best = self.arms.argmax()
         return (None, np.random.normal(self.arms[i], 1))
 

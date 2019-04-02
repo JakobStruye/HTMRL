@@ -4,6 +4,7 @@ general:
 env:
   name: Bandit
   k: 10
+  shuffle: 0
 algorithms:
   htmrl:
       enabled: 1
@@ -58,3 +59,10 @@ experiments:
        algorithms:
          htmrl:
            boost_strength: 0.0
+  -  shuffle:
+       env:
+         shuffle: 1
+       algorithms:
+         eps:
+           enabled: 1
+           e: 0.01
