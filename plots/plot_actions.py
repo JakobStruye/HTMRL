@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 from math import log
-plt.rcParams.update({'font.size': 11})
+plt.rcParams.update({'font.size': 13})
 
 #CONFIGURE THIS TO GENERATE PLOT FOR EITHER STATES OR ACTIONS
-isstates = True
+isstates = False
 
 colors = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02"]
 styles = [[8,0],[8,2,8,2],[8,2,2,2],[2,2,2,2], [8,2,2,2,2,2], [8,2,8,2,2,2]]
@@ -63,12 +63,12 @@ for d in dirs:
         points = np.reshape(points, (repeats, length))
 
         #undo moving window cumsum
-        points *= 100
+        #points *= 100
 
-        for i in range(length - 100):
-            points[:,i + 100] += points[:,i]
+        #for i in range(length - 100):
+        #    points[:,i + 100] += points[:,i]
 
-        points[:,1:] -= points[:,:-1].copy()
+        #points[:,1:] -= points[:,:-1].copy()
 
         #redo with larger window
         points = np.cumsum(points, axis=1)
@@ -109,7 +109,7 @@ custom_lines = []
 for i in range(ctr):
     custom_lines.append(Line2D([0], [0], color=colors[i], ls='-', dashes=styles_legend[i], alpha=0.8))
 #ax.legend(title=typename_cap)
-ax.legend(custom_lines, labels, handlelength=3)
+ax.legend(custom_lines, labels, handlelength=2)
 #plt.xlim(left=100)
 plt.ylim(bottom=-1.1743108423442274, top=1.1705477696310274)
 plt.xlabel("Training steps")

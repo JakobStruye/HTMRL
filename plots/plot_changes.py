@@ -5,15 +5,15 @@ import numpy as np
 from scipy.signal import savgol_filter
 
 #CONFIGURE THIS TO GENERATE HTMRL VS EPS OR HTMRL VS CONSTRAINED-HTMRL PLOT
-secondgraph = True
+secondgraph = False
 
-plt.rcParams.update({'font.size': 11})
+plt.rcParams.update({'font.size': 13})
 
-learner_labels = {"eps": "ε=0.1",
-                  "eps2": "ε=0.01",
-                  "htmrl": "HTMRL",
-                  "chtmrl": "HTMRL (small)",
-                  "veryhtmrl": "HTMRL (tiny)"}
+learner_labels = {"default/eps": "ϵ=0.1",
+                  "eps001/eps": "ϵ=0.01",
+                  "default/htmrl": "HTMRL",
+                  "small/htmrl": "HTMRL (small)",
+                  "tiny/htmrl": "HTMRL (tiny)"}
 
 
 #colors = ["#d7191c", "#fdae61", "#ffffbf", "#abdda4", "#2b83ba"]
@@ -37,11 +37,11 @@ length = 10000
 ax = plt.gca()
 
 ctr = 0
-d = datadir + "/boosted"
+d = datadir# + "/boosted"
 if not secondgraph:
-    learners = ["eps", "eps2", "htmrl"]
+    learners = ["default/eps", "eps001/eps", "default/htmrl"]
 else:
-    learners = ["eps2", "htmrl", "chtmrl", "veryhtmrl" ]
+    learners = ["eps001/eps", "default/htmrl", "small/htmrl", "tiny/htmrl" ]
 for learner in learners: 
     if d == "raw":
         continue
@@ -101,5 +101,5 @@ plt.xlabel("Training steps")
 plt.ylabel("Mean reward (latest 10 steps)")
 plt.grid()
 name = "nonstatic-htmrl" if not secondgraph else "nonstatic-minhtmrl"
-#plt.savefig("performance_{}.pdf".format(name), format="pdf", dpi=1200, bbox_inches='tight', pad_inches = 0)
-plt.show(block=True)
+plt.savefig("performance_{}.pdf".format(name), format="pdf", dpi=1200, bbox_inches='tight', pad_inches = 0)
+#plt.show(block=True)
