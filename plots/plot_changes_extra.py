@@ -5,14 +5,14 @@ import numpy as np
 from scipy.signal import savgol_filter
 
 types = ["longrew", "noboost", "reorder-h", "reorder-e"]
-graphtype = types[3]
+graphtype = types[0]
 
 plt.rcParams.update({'font.size': 13})
 
 learner_labels = {"default/htmrl": "Default",
                   "noboost/htmrl": "No boosting",
-                  "longwindow/htmrl": "Reward window: 2000",
-                  "verylongwindow/htmrl": "Reward window: unbounded",
+                  "longwindow/htmrl": "w=2000",
+                  "verylongwindow/htmrl": "w=10000",
                   "shuffle/htmrl": "Shuffled",
                   "shuffle/eps": "Shuffled",
                   "eps001/eps": "Default (0.01)"}
@@ -20,7 +20,7 @@ learner_labels = {"default/htmrl": "Default",
 
 #colors = ["#d7191c", "#fdae61", "#ffffbf", "#abdda4", "#2b83ba"]
 if graphtype == "longrew":
-    colors = ["#1d577c", "#4da83f", "#34702a"]
+    colors = ["#1d577c", "#449538", "#34702a"]
 elif graphtype == "noboost":
     colors = ["#1d577c", "#70672a"]
 elif graphtype == "reorder-h":
