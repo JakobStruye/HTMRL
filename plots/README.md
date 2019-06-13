@@ -1,8 +1,7 @@
 # HTMRL -- plots
 
 ## Getting the data
-Either fetch it from the repo with
-`git lfs pull -X ''`  
+Either fetch the data from https://jstruyearchive.blob.core.windows.net/htmrl/data.tar.gz (extract here)
 Or generate it using the instructions in the top-level Readme
 
 ## Generating the plots
